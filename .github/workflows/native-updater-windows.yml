@@ -1,0 +1,37 @@
+name: Test Windows native updater restart
+on:
+  push:
+    branches: [codex/native-gui-updater]
+  pull_request:
+    paths:
+      - portable/launcher/**
+      - portable/Start-LaserForge.cmd
+      - tests/portable/native_restart.py
+      - .github/workflows/native-updater-windows.yml
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  windows-restart:
+    runs-on: windows-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.24.x'
+          cache: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Run native updater unit tests on Windows
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force portable/launcher/dist | Out-Null
+          Set-Content portable/launcher/dist/index.html 'test fixture'
+          Push-Location portable/launcher
+          go test -v ./...
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          Pop-Location
+      - name: Test executable replacement and native restart without Python
+        run: python tests/portable/native_restart.py

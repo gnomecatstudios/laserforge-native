@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://gnomecatstudios.github.io/laserforge.app/sitemap.xml
