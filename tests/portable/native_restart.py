@@ -61,6 +61,16 @@ def wait_for(check, label, seconds=60):
     raise AssertionError(f'Timed out: {label}; last error: {last}')
 
 
+def launcher_running(process, pid):
+    # Windows starts the launcher through Start-LaserForge.cmd, which hands it
+    # off with `start` and exits, so look the launcher up by its own process ID.
+    if os.name != 'nt':
+        return process.poll() is None
+    found = subprocess.run(['tasklist', '/FI', f'PID eq {pid}', '/NH', '/FO', 'CSV'],
+                           capture_output=True, text=True).stdout
+    return f'"{pid}"' in found
+
+
 def read_url(path):
     with urllib.request.urlopen(ADDRESS + path, timeout=2) as response:
         return response.read()
@@ -80,8 +90,12 @@ def action(name, token):
 def build(work, version):
     module = work / ('source-' + version)
     module.mkdir()
-    for name in ('main.go', 'updater.go', 'go.mod'):
-        shutil.copy2(ROOT / 'portable/launcher' / name, module / name)
+    # Every launcher source file (the app window, phone capture and its page
+    # included), without the Go unit tests.
+    launcher = ROOT / 'portable/launcher'
+    for path in [*launcher.glob('*.go'), *launcher.glob('*.html'), launcher / 'go.mod']:
+        if not path.name.endswith('_test.go'):
+            shutil.copy2(path, module / path.name)
     (module / 'fixture_transport.go').write_text(TRANSPORT)
     (module / 'dist').mkdir()
     (module / 'dist/index.html').write_text('native-restart-test-' + version)
@@ -139,6 +153,7 @@ def main():
                 initial = wait_for(status, 'initial native updater starts')
                 assert initial['status'] == 'idle'
                 token = initial['token']
+                launcher = int((fixture / 'processes.log').read_text().splitlines()[0].split('|', 1)[0])
                 print('PASS: native launcher starts without Python in PATH', flush=True)
                 # A corrupt package must leave the running app and project intact.
                 package.write_bytes(bytes([valid_bytes[0] ^ 1]) + valid_bytes[1:])
@@ -146,7 +161,8 @@ def main():
                 failed = wait_for(lambda: (value if (value := status())['status'] == 'error' else None), 'corrupt update rejected')
                 assert 'checksum' in failed['error']
                 assert (install / BINARY).read_bytes() == old_binary.read_bytes()
-                assert process.poll() is None
+                assert launcher_running(process, launcher)
+                assert read_url('/') == b'native-restart-test-1.0.0'
                 print('PASS: corrupt update rejected; old app still running', flush=True)
                 package.write_bytes(valid_bytes)
                 action('download', token)
@@ -156,6 +172,7 @@ def main():
                 print('PASS: verified update staged without replacing running executable', flush=True)
                 action('install', token)
                 wait_for(lambda: read_url('/') == b'native-restart-test-1.2.3', 'updated native server restarts', seconds=90)
+                wait_for(lambda: not launcher_running(process, launcher), 'old launcher exits', seconds=15)
                 process.wait(timeout=15)
                 assert process.returncode == 0
                 restarted = status()
