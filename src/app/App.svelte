@@ -1,0 +1,147 @@
+<script lang="ts">
+  import { onMount } from 'svelte';
+  import ConfirmHost from '$lib/ui/ConfirmHost.svelte';
+  import ErrorBoundary from '$lib/ui/ErrorBoundary.svelte';
+  import Toaster from '$lib/ui/Toaster.svelte';
+  import TooltipHost from '$lib/ui/TooltipHost.svelte';
+  import { reportError } from '$lib/ui/errors';
+  import StartScreen from './start/StartScreen.svelte';
+  import Workspace from './workspace/Workspace.svelte';
+  import HelpPage from './pages/HelpPage.svelte';
+  import AboutPage from './pages/AboutPage.svelte';
+  import Tour from './tour/Tour.svelte';
+  import Dialogs from './dialogs/Dialogs.svelte';
+  import PrintSheet from './print/PrintSheet.svelte';
+  import DropZone from './workspace/DropZone.svelte';
+  import { editor } from './state/editor.svelte';
+  import { preferences } from './state/preferences.svelte';
+  import { profiles } from './state/profiles.svelte';
+  import { route } from './state/route.svelte';
+  import { session } from './state/session.svelte';
+  import { hasSeenTour } from './state/tour';
+  import { ui } from './state/ui.svelte';
+  import { fonts } from './state/fonts.svelte';
+  import { installShortcuts } from './shortcuts';
+  import { installLaunchQueue, installPwa } from './pwa.svelte';
+  import UpdateDialog from './updates/UpdateDialog.svelte';
+  import { installUpdateChecks } from './updates/updates.svelte';
+  import { connectedSession } from './machines/registry';
+
+  let ready = $state(false);
+
+  // A reload in the same tab carries on in the open project; a new visit starts on the welcome
+  // page, which lists it under recent projects.
+  const TAB_KEY = 'openlaser.tab.working';
+  const returning = (() => {
+    try {
+      return sessionStorage.getItem(TAB_KEY) !== '1';
+    } catch {
+      return true;
+    }
+  })();
+  $effect(() => {
+    if (!ready) return;
+    try {
+      if (editor.hasDocument) sessionStorage.setItem(TAB_KEY, '1');
+      else sessionStorage.removeItem(TAB_KEY);
+    } catch {
+      // Storage unavailable: every visit starts on the welcome page.
+    }
+  });
+
+  // Theme: 'system' leaves the root unset so tokens.css follows prefers-color-scheme.
+  $effect(() => {
+    const theme = preferences.value.theme;
+    if (theme === 'system') delete document.documentElement.dataset.theme;
+    else document.documentElement.dataset.theme = theme;
+  });
+
+  $effect(() => session.schedule(editor.project));
+
+  $effect(() => {
+    const name = editor.project?.name ?? editor.gcode?.name;
+    document.title = name ? `${name} · Laser Forge` : 'Laser Forge';
+  });
+
+  onMount(() => {
+    const uninstall = installShortcuts();
+    void (async () => {
+      try {
+        // Uploaded fonts register in the background, before any text needs re-outlining.
+        void fonts.init();
+        await Promise.all([preferences.load(), profiles.load(), session.refreshRecents()]);
+        const restored = returning ? undefined : await session.restorable();
+        if (restored) {
+          editor.open(restored);
+          session.markSaved(restored);
+        }
+      } catch (error) {
+        reportError(error, 'Startup');
+      } finally {
+        ready = true;
+        ui.tourOpen = !hasSeenTour();
+        installPwa();
+        installLaunchQueue();
+        void installUpdateChecks();
+      }
+    })();
+    const beforeUnload = (event: BeforeUnloadEvent) => {
+      const live = connectedSession();
+      if (live?.jobActive) {
+        live.pauseForUnload();
+        event.preventDefault();
+      } else if (editor.project) {
+        void session.flush();
+      }
+    };
+    window.addEventListener('beforeunload', beforeUnload);
+    return () => {
+      uninstall();
+      window.removeEventListener('beforeunload', beforeUnload);
+    };
+  });
+</script>
+
+{#if ready}
+  <div class="app" class:hidden={route.page !== 'app'}>
+    <ErrorBoundary name="Laser Forge">
+      {#if editor.hasDocument}
+        <Workspace />
+      {:else}
+        <StartScreen />
+      {/if}
+    </ErrorBoundary>
+  </div>
+
+  {#if route.page === 'help'}
+    <ErrorBoundary name="Help"><HelpPage /></ErrorBoundary>
+  {:else if route.page === 'about'}
+    <ErrorBoundary name="About"><AboutPage /></ErrorBoundary>
+  {/if}
+
+  <ErrorBoundary name="Dialogs"><Dialogs /></ErrorBoundary>
+  <ErrorBoundary name="Tour"><Tour /></ErrorBoundary>
+  <ErrorBoundary name="Updates"><UpdateDialog /></ErrorBoundary>
+  <DropZone />
+  <PrintSheet />
+{/if}
+
+<ConfirmHost />
+<Toaster />
+<TooltipHost />
+
+<style>
+  .app {
+    height: 100%;
+  }
+
+  .hidden {
+    display: none;
+  }
+
+  @media print {
+    .app {
+      display: none;
+    }
+  }
+</style>

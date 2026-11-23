@@ -1,0 +1,142 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0E0F11">
+<title>Laser Forge · Scan art</title>
+<style>
+  :root { color-scheme: dark; --bg:#0E0F11; --panel:#17191c; --line:#2a2d31; --text:#f2f3f5; --muted:#9aa0a6; --accent:#ff6a1a; --ok:#3ccf7a; --err:#ff5c5c; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--bg); color: var(--text); font: 16px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  main { max-width: 520px; margin: 0 auto; padding: max(20px, env(safe-area-inset-top)) 16px max(24px, env(safe-area-inset-bottom)); display: flex; flex-direction: column; gap: 16px; min-height: 100dvh; }
+  h1 { font-size: 20px; margin: 0; }
+  p { margin: 0; color: var(--muted); }
+  .preview { flex: 1; min-height: 220px; border: 1px dashed var(--line); border-radius: 14px; display: grid; place-items: center; overflow: hidden; background: var(--panel); }
+  .preview img { max-width: 100%; max-height: 60dvh; display: block; }
+  .preview span { color: var(--muted); padding: 24px; text-align: center; }
+  .btn { display: flex; align-items: center; justify-content: center; gap: 10px; width: 100%; min-height: 56px; border-radius: 14px; border: 1px solid var(--line); background: var(--panel); color: var(--text); font: inherit; font-weight: 600; cursor: pointer; }
+  .btn.primary { background: var(--accent); border-color: var(--accent); color: #111; font-size: 18px; }
+  .btn:disabled { opacity: .5; }
+  .row { display: flex; gap: 10px; }
+  .status { min-height: 1.5em; text-align: center; }
+  .status.ok { color: var(--ok); } .status.err { color: var(--err); }
+  label.check { display: flex; gap: 10px; align-items: center; color: var(--muted); font-size: 14px; }
+  input[type=file] { display: none; }
+  svg { width: 22px; height: 22px; }
+</style>
+</head>
+<body>
+<main>
+  <div>
+    <h1>Scan art for Laser Forge</h1>
+    <p>Lay the artwork flat in good light and fill the frame. Photos go straight to the project on your computer.</p>
+  </div>
+  <div class="preview" id="preview"><span>No photo yet</span></div>
+  <div class="status" id="status" role="status" aria-live="polite"></div>
+  <button class="btn primary" id="camera" type="button">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></svg>
+    Take photo
+  </button>
+  <div class="row">
+    <button class="btn" id="library" type="button">Choose from library</button>
+  </div>
+  <label class="check"><input type="checkbox" id="mono" style="display:inline"> Convert to black and white before sending</label>
+  <input type="file" id="cameraInput" accept="image/*" capture="environment">
+  <input type="file" id="libraryInput" accept="image/*" multiple>
+</main>
+<script>
+(() => {
+  const MAX_SIDE = 4096;
+  const status = document.getElementById('status');
+  const preview = document.getElementById('preview');
+  const buttons = [document.getElementById('camera'), document.getElementById('library')];
+  const cameraInput = document.getElementById('cameraInput');
+  const libraryInput = document.getElementById('libraryInput');
+  const mono = document.getElementById('mono');
+  const uploadUrl = location.pathname.replace(/\/$/, '') + '/upload';
+  let sent = 0;
+
+  function say(text, kind) { status.textContent = text; status.className = 'status' + (kind ? ' ' + kind : ''); }
+  function busy(on) { buttons.forEach((b) => (b.disabled = on)); }
+
+  document.getElementById('camera').onclick = () => cameraInput.click();
+  document.getElementById('library').onclick = () => libraryInput.click();
+  cameraInput.onchange = () => handle(cameraInput);
+  libraryInput.onchange = () => handle(libraryInput);
+
+  async function handle(input) {
+    const files = [...input.files];
+    input.value = '';
+    if (!files.length) return;
+    busy(true);
+    try {
+      for (const file of files) await send(file);
+    } finally {
+      busy(false);
+    }
+  }
+
+  // Re-encode on the phone: fixes rotation, turns HEIC into JPEG and keeps uploads small.
+  async function prepare(file) {
+    let bitmap;
+    try {
+      bitmap = await createImageBitmap(file, { imageOrientation: 'from-image' });
+    } catch {
+      bitmap = await new Promise((resolve, reject) => {
+        const img = new Image();
+        img.onload = () => resolve(img);
+        img.onerror = () => reject(new Error('This photo format is not supported. Try JPEG or PNG.'));
+        img.src = URL.createObjectURL(file);
+      });
+    }
+    const w = bitmap.width, h = bitmap.height;
+    const scale = Math.min(1, MAX_SIDE / Math.max(w, h));
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.round(w * scale);
+    canvas.height = Math.round(h * scale);
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+    if (mono.checked) {
+      const data = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      const px = data.data;
+      for (let i = 0; i < px.length; i += 4) {
+        const y = 0.299 * px[i] + 0.587 * px[i + 1] + 0.114 * px[i + 2];
+        px[i] = px[i + 1] = px[i + 2] = y;
+      }
+      ctx.putImageData(data, 0, 0);
+    }
+    return new Promise((resolve, reject) =>
+      canvas.toBlob((b) => (b ? resolve(b) : reject(new Error('Could not prepare the photo.'))), 'image/jpeg', 0.92),
+    );
+  }
+
+  async function send(file) {
+    say('Preparing photo…');
+    let blob;
+    try {
+      blob = await prepare(file);
+    } catch (e) {
+      say(e.message || 'Could not read the photo.', 'err');
+      return;
+    }
+    preview.replaceChildren(Object.assign(new Image(), { src: URL.createObjectURL(blob), alt: 'Photo being sent' }));
+    const base = (file.name || 'phone-photo').replace(/\.[^.]+$/, '');
+    say('Sending to Laser Forge…');
+    try {
+      const response = await fetch(uploadUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'image/jpeg', 'X-File-Name': encodeURIComponent(base + '.jpg') },
+        body: blob,
+      });
+      if (!response.ok) throw new Error((await response.text()) || 'Upload failed.');
+      sent++;
+      say(sent === 1 ? 'Sent! Check your computer.' : `Sent ${sent} photos. Check your computer.`, 'ok');
+    } catch (e) {
+      say(e.message && e.message !== 'Failed to fetch' ? e.message : 'Could not reach Laser Forge. Is the launcher still open?', 'err');
+    }
+  }
+})();
+</script>
+</body>
+</html>

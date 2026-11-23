@@ -1,0 +1,43 @@
+/** Which overlays are open. Kept apart from the editor so dialogs never touch project state directly. */
+import type { DxfDrawing } from 'libopenlaser/import';
+import type { SvgImportResult } from 'libopenlaser/import';
+import { DEFAULT_CONTOUR, type ContourOptions } from 'libopenlaser/project';
+import type { Blocker } from '../connect/browser-check';
+
+/** An SVG or DXF waiting in the import dialog for its color → layer choices. */
+export type PendingVectorImport =
+  | { format: 'svg'; fileName: string; text: string; result: SvgImportResult }
+  | { format: 'dxf'; fileName: string; drawing: DxfDrawing };
+
+class Ui {
+  tourOpen = $state(false);
+  profilesOpen = $state(false);
+  /** The Machine dropdown in the top bar. Stays open while you work on the bed. */
+  machineOpen = $state(false);
+  preferencesOpen = $state(false);
+  deviceSettingsOpen = $state(false);
+  shortcutsOpen = $state(false);
+  /** “Laser not showing up?” walkthrough. */
+  connectHelpOpen = $state(false);
+  /** What keeps Bluetooth or USB from working here, while its setup guide is open. */
+  connectSetup = $state.raw<Blocker | null>(null);
+  /** Outline tool popover and its settings, kept for the session. */
+  outlineOpen = $state(false);
+  outline = $state<ContourOptions>({ ...DEFAULT_CONTOUR });
+  vectorImport = $state.raw<PendingVectorImport | null>(null);
+  printOpen = $state(false);
+  /** Image being traced, when the Trace dialog is open. */
+  /** Simplify path popover, opened from the toolbar or the canvas menu. */
+  simplifyOpen = $state(false);
+  traceForSimplify = $state(false);
+  traceImageId = $state<string | null>(null);
+  /** Layer under the pointer in the Layers panel; its objects glow on the bed. */
+  hoverLayerId = $state<string | null>(null);
+  /** Object under the pointer in the Layers panel. */
+  hoverObjectId = $state<string | null>(null);
+  /** Set while the browser print runs, so the print sheet renders. */
+  printing = $state(false);
+  print = $state<{ scale: 'actual' | 'fit' }>({ scale: 'actual' });
+}
+
+export const ui = new Ui();

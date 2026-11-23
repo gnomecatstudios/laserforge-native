@@ -1,0 +1,87 @@
+name: Build portable packages
+on:
+  workflow_dispatch:
+    inputs:
+      publish:
+        description: Publish verified ZIPs to LaserForge
+        type: boolean
+        default: false
+  push:
+    branches: [main]
+concurrency:
+  group: portable-release-${{ github.ref }}
+  cancel-in-progress: false
+permissions:
+  contents: write
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.24.x'
+          cache: false
+      - name: Select next public release version
+        if: github.ref == 'refs/heads/main' && github.event_name == 'workflow_dispatch' && inputs.publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh api "repos/$GITHUB_REPOSITORY/releases/latest" > "$RUNNER_TEMP/latest-release.json" || echo '{}' > "$RUNNER_TEMP/latest-release.json"
+          python3 - <<'PY'
+          import json, os, re
+          from pathlib import Path
+          path = Path('package.json')
+          package = json.loads(path.read_text())
+          latest = json.loads((Path(os.environ['RUNNER_TEMP']) / 'latest-release.json').read_text()).get('tag_name')
+          def parts(value):
+              if not re.fullmatch(r'\d+\.\d+\.\d+', value):
+                  raise ValueError(f'Invalid stable version: {value}')
+              return tuple(map(int, value.split('.')))
+          previous = parts(latest.removeprefix('v')) if latest else (0, 0, 0)
+          base = parts(package['version'])
+          chosen = max(base, (previous[0], previous[1], previous[2] + 1))
+          package['version'] = '.'.join(map(str, chosen))
+          path.write_text(json.dumps(package, indent=2) + '\n')
+          print('Building release', package['version'])
+          PY
+      - run: pnpm install --frozen-lockfile
+      - run: python3 -m unittest discover -s portable -p 'test_*.py'
+      - run: pnpm exec playwright install --with-deps chromium
+      - run: pnpm icons
+      - run: pnpm build
+      - name: Test native portable updater
+        run: |
+          cp -R dist portable/launcher/dist
+          cd portable/launcher
+          go test -race ./...
+      - run: python3 scripts/build-portable.py --revision "${GITHUB_SHA:0:7}"
+      - run: python3 scripts/verify-portable-branding.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: LaserForge-verified-packages
+          path: |
+            portable/downloads/*.zip
+            portable/downloads/SHA256SUMS.txt
+          if-no-files-found: error
+      - name: Publish verified portable release
+        if: github.ref == 'refs/heads/main' && github.event_name == 'workflow_dispatch' && inputs.publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          version=$(node -p "require('./package.json').version")
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add package.json
+          git add -A portable/downloads
+          if ! git diff --cached --quiet; then
+            git commit -m "Refresh verified portable distributions v$version"
+            git push origin HEAD:main
+          fi
+          gh release create "v$version" portable/downloads/*.zip portable/downloads/SHA256SUMS.txt --target "$(git rev-parse HEAD)" --title "Laser Forge v$version" --generate-notes
+

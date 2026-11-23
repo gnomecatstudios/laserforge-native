@@ -1,0 +1,291 @@
+# Repository hierarchy and file audit
+
+Compared LaserForgeDev `8da8f8b1ab485a81f0785ee4c09ee6cabe29105f` with LaserF `d4612e70d1d5f8a4ff6b2d42e63278f049f12ef6`.
+
+## Findings
+
+- LaserForgeDev contained 435 tracked files, all at repository root; LaserF contained 650 tracked files.
+- All 435 original files match a LaserF Git blob exactly. No unique development content was replaced.
+- 213 reference file paths had content absent from LaserForgeDev. A further two required paths reused content already present elsewhere, giving 215 missing file instances in total.
+- 425 root files were relocated and 10 root files retained. The resulting source tree matches all 650 reference paths and contents, plus this report.
+- Shared basenames are not necessarily duplicates: flattening lost distinct modules, package manifests, TypeScript configs and golden fixtures.
+
+## Exact duplicate groups in the original development repository
+
+These files have identical content. Their restored paths are retained because they serve different asset, license or packaging roles.
+
+- `LICENSE`, `LICENSE-LaserForge.txt`
+- `icon-192.png`, `logo-source.png`, `logo.png`
+- `icon-512.png`, `mark.png`
+
+## Basenames used at multiple reference paths
+
+- `LICENSE`: 2 paths
+- `README.md`: 3 paths
+- `accessories.test.ts`: 2 paths
+- `catalog.ts`: 2 paths
+- `connection.ts`: 2 paths
+- `contour.ts`: 2 paths
+- `curves.ts`: 2 paths
+- `driver.test.ts`: 2 paths
+- `driver.ts`: 2 paths
+- `emit.ts`: 2 paths
+- `encoder.ts`: 2 paths
+- `errors.ts`: 2 paths
+- `expected.gcode`: 18 paths
+- `export.ts`: 2 paths
+- `fit.ts`: 2 paths
+- `fixtures.ts`: 2 paths
+- `format.ts`: 2 paths
+- `frame.test.ts`: 2 paths
+- `frame.ts`: 2 paths
+- `gcode-interpreter.ts`: 2 paths
+- `gcode-lines.ts`: 2 paths
+- `helpers.ts`: 5 paths
+- `index.ts`: 22 paths
+- `layers.ts`: 2 paths
+- `logo.png`: 2 paths
+- `outline.test.ts`: 2 paths
+- `outline.ts`: 2 paths
+- `package.json`: 2 paths
+- `probe.ts`: 3 paths
+- `protocol.ts`: 2 paths
+- `session.svelte.ts`: 2 paths
+- `settings.json`: 16 paths
+- `setup.ts`: 2 paths
+- `shapes.ts`: 2 paths
+- `tsconfig.json`: 2 paths
+- `types.ts`: 8 paths
+- `units.ts`: 2 paths
+- `virtual-machine.ts`: 2 paths
+- `vite.config.ts`: 2 paths
+- `w40.ts`: 2 paths
+
+## Content missing before restoration
+
+- `.gitignore`
+- `.prettierignore`
+- `.prettierrc`
+- `CLAUDE.md`
+- `packages/libopenlaser/README.md`
+- `packages/libopenlaser/examples/laserpecker.ts`
+- `packages/libopenlaser/examples/virtual-machine.ts`
+- `packages/libopenlaser/package.json`
+- `packages/libopenlaser/src/cam/laserpecker/encoder.ts`
+- `packages/libopenlaser/src/cam/laserpecker/index.ts`
+- `packages/libopenlaser/src/cam/laserpecker/job.ts`
+- `packages/libopenlaser/src/cam/ordering/index.ts`
+- `packages/libopenlaser/src/cam/raster/index.ts`
+- `packages/libopenlaser/src/cam/raster/tone.ts`
+- `packages/libopenlaser/src/cam/ruida/emit.ts`
+- `packages/libopenlaser/src/cam/ruida/encoder.ts`
+- `packages/libopenlaser/src/cam/ruida/index.ts`
+- `packages/libopenlaser/src/cam/toolpath.ts`
+- `packages/libopenlaser/src/cam/types.ts`
+- `packages/libopenlaser/src/fonts/index.ts`
+- `packages/libopenlaser/src/geometry/index.ts`
+- `packages/libopenlaser/src/geometry/types.ts`
+- `packages/libopenlaser/src/geometry/vec.ts`
+- `packages/libopenlaser/src/import/dxf/index.ts`
+- `packages/libopenlaser/src/import/index.ts`
+- `packages/libopenlaser/src/import/svg/index.ts`
+- `packages/libopenlaser/src/import/svg/to-project.ts`
+- `packages/libopenlaser/src/import/svg/transform.ts`
+- `packages/libopenlaser/src/import/svg/types.ts`
+- `packages/libopenlaser/src/import/svg/units.ts`
+- `packages/libopenlaser/src/import/svg/walk.ts`
+- `packages/libopenlaser/src/machine/index.ts`
+- `packages/libopenlaser/src/machine/job/gcode-lines.ts`
+- `packages/libopenlaser/src/machine/laserpecker/connection.ts`
+- `packages/libopenlaser/src/machine/laserpecker/driver.ts`
+- `packages/libopenlaser/src/machine/laserpecker/frame.ts`
+- `packages/libopenlaser/src/machine/laserpecker/index.ts`
+- `packages/libopenlaser/src/machine/laserpecker/probe.ts`
+- `packages/libopenlaser/src/machine/laserpecker/virtual-device.ts`
+- `packages/libopenlaser/src/machine/probe.ts`
+- `packages/libopenlaser/src/machine/simulator/virtual-machine.ts`
+- `packages/libopenlaser/src/machine/transport/usb-filters.ts`
+- `packages/libopenlaser/src/machine/transport/web-bluetooth-types.ts`
+- `packages/libopenlaser/src/machine/transport/web-bluetooth.ts`
+- `packages/libopenlaser/src/machine/transport/web-serial-types.ts`
+- `packages/libopenlaser/src/machine/transport/web-serial.ts`
+- `packages/libopenlaser/src/machine/types.ts`
+- `packages/libopenlaser/src/machine/virtual-scheduler.ts`
+- `packages/libopenlaser/src/project/index.ts`
+- `packages/libopenlaser/src/project/materials/co2/index.ts`
+- `packages/libopenlaser/src/project/materials/co2/w100.ts`
+- `packages/libopenlaser/src/project/materials/co2/w40.ts`
+- `packages/libopenlaser/src/project/materials/co2/w60.ts`
+- `packages/libopenlaser/src/project/materials/co2/w80.ts`
+- `packages/libopenlaser/src/project/materials/diode/index.ts`
+- `packages/libopenlaser/src/project/materials/diode/w10.ts`
+- `packages/libopenlaser/src/project/materials/diode/w20.ts`
+- `packages/libopenlaser/src/project/materials/diode/w40.ts`
+- `packages/libopenlaser/src/project/materials/diode/w5.ts`
+- `packages/libopenlaser/src/project/materials/index.ts`
+- `packages/libopenlaser/src/project/materials/laserpecker/index.ts`
+- `packages/libopenlaser/src/project/materials/types.ts`
+- `packages/libopenlaser/src/project/outline.ts`
+- `packages/libopenlaser/src/project/shapes.ts`
+- `packages/libopenlaser/src/project/types.ts`
+- `packages/libopenlaser/src/shapes/catalog.ts`
+- `packages/libopenlaser/src/shapes/fit.ts`
+- `packages/libopenlaser/src/shapes/index.ts`
+- `packages/libopenlaser/src/shapes/internal-types.ts`
+- `packages/libopenlaser/src/trace/contour.ts`
+- `packages/libopenlaser/src/trace/curves.ts`
+- `packages/libopenlaser/src/trace/index.ts`
+- `packages/libopenlaser/src/trace/to-paths.ts`
+- `packages/libopenlaser/src/trace/trace.ts`
+- `packages/libopenlaser/src/trace/trace.worker.ts`
+- `packages/libopenlaser/src/trace/types.ts`
+- `packages/libopenlaser/test/golden/image-gcode-grayscale/expected.gcode`
+- `packages/libopenlaser/test/golden/image-gcode-unidirectional/expected.gcode`
+- `packages/libopenlaser/test/golden/raster-atkinson/expected.gcode`
+- `packages/libopenlaser/test/golden/raster-atkinson/settings.json`
+- `packages/libopenlaser/test/golden/raster-bidirectional-overscan/expected.gcode`
+- `packages/libopenlaser/test/golden/raster-bidirectional-overscan/settings.json`
+- `packages/libopenlaser/test/golden/raster-floyd-steinberg/expected.gcode`
+- `packages/libopenlaser/test/golden/raster-floyd-steinberg/settings.json`
+- `packages/libopenlaser/test/golden/raster-grayscale/expected.gcode`
+- `packages/libopenlaser/test/golden/raster-grayscale/settings.json`
+- `packages/libopenlaser/test/golden/raster-jarvis/expected.gcode`
+- `packages/libopenlaser/test/golden/raster-jarvis/settings.json`
+- `packages/libopenlaser/test/golden/raster-ordered/expected.gcode`
+- `packages/libopenlaser/test/golden/raster-ordered/settings.json`
+- `packages/libopenlaser/test/golden/raster-stucki/expected.gcode`
+- `packages/libopenlaser/test/golden/raster-stucki/settings.json`
+- `packages/libopenlaser/test/golden/raster-threshold/expected.gcode`
+- `packages/libopenlaser/test/golden/raster-threshold/settings.json`
+- `packages/libopenlaser/test/golden/vector-bidirectional-overscan/expected.gcode`
+- `packages/libopenlaser/test/golden/vector-bidirectional-overscan/settings.json`
+- `packages/libopenlaser/test/golden/vector-compound-fill-evenodd/expected.gcode`
+- `packages/libopenlaser/test/golden/vector-compound-fill-evenodd/settings.json`
+- `packages/libopenlaser/test/golden/vector-fill-45/expected.gcode`
+- `packages/libopenlaser/test/golden/vector-fill-45/settings.json`
+- `packages/libopenlaser/test/golden/vector-kerf-offset/expected.gcode`
+- `packages/libopenlaser/test/golden/vector-kerf-offset/settings.json`
+- `packages/libopenlaser/test/golden/vector-nested-inner-first/expected.gcode`
+- `packages/libopenlaser/test/golden/vector-nested-inner-first/settings.json`
+- `packages/libopenlaser/test/golden/vector-origin-current-position/expected.gcode`
+- `packages/libopenlaser/test/golden/vector-origin-current-position/settings.json`
+- `packages/libopenlaser/test/golden/vector-rectangle-cut/expected.gcode`
+- `packages/libopenlaser/test/golden/vector-rectangle-cut/settings.json`
+- `packages/libopenlaser/test/golden/vector.test.ts`
+- `packages/libopenlaser/test/unit/cam/gcode-interpreter.ts`
+- `packages/libopenlaser/test/unit/cam/laserpecker/laserpecker.test.ts`
+- `packages/libopenlaser/test/unit/cam/raster/helpers.ts`
+- `packages/libopenlaser/test/unit/cam/raster/tone.test.ts`
+- `packages/libopenlaser/test/unit/fonts/helpers.ts`
+- `packages/libopenlaser/test/unit/import/svg/to-project.test.ts`
+- `packages/libopenlaser/test/unit/machine/helpers.ts`
+- `packages/libopenlaser/test/unit/machine/laserpecker/driver.test.ts`
+- `packages/libopenlaser/test/unit/machine/laserpecker/frame.test.ts`
+- `packages/libopenlaser/test/unit/machine/laserpecker/web-bluetooth.test.ts`
+- `packages/libopenlaser/test/unit/machine/web-serial.test.ts`
+- `packages/libopenlaser/test/unit/project/accessories.test.ts`
+- `packages/libopenlaser/test/unit/project/outline.test.ts`
+- `packages/libopenlaser/test/unit/trace/fixtures.ts`
+- `packages/libopenlaser/test/unit/trace/to-paths.test.ts`
+- `packages/libopenlaser/tsconfig.build.json`
+- `packages/libopenlaser/tsconfig.json`
+- `packages/libopenlaser/vite.config.ts`
+- `portable/README.md`
+- `portable/downloads/LaserForge-Portable-linux-x64.zip`
+- `portable/downloads/LaserForge-Portable-macos-apple-silicon.zip`
+- `portable/downloads/LaserForge-Portable-macos-intel.zip`
+- `portable/downloads/LaserForge-Portable-raspberry-pi-arm32.zip`
+- `portable/downloads/LaserForge-Portable-raspberry-pi-arm64.zip`
+- `portable/downloads/LaserForge-Portable-source.zip`
+- `portable/downloads/LaserForge-Portable-windows-x64.zip`
+- `portable/downloads/LaserForge-Setup-linux-x64.deb`
+- `portable/downloads/LaserForge-Setup-raspberry-pi-arm32.deb`
+- `portable/downloads/LaserForge-Setup-raspberry-pi-arm64.deb`
+- `public/laserforge.icns`
+- `scripts/update-google-fonts.mjs`
+- `scripts/verify-portable-branding.py`
+- `src/app/canvas/TextEditOverlay.svelte`
+- `src/app/canvas/ink.ts`
+- `src/app/canvas/text-edit.ts`
+- `src/app/canvas/tools.ts`
+- `src/app/canvas/viewport.ts`
+- `src/app/dialogs/TraceDialog.svelte`
+- `src/app/dialogs/TracePreview.svelte`
+- `src/app/dialogs/VectorImportDialog.svelte`
+- `src/app/inspector/TextInspector.svelte`
+- `src/app/lib/format.ts`
+- `src/app/lib/job-summary.ts`
+- `src/app/lib/keys.ts`
+- `src/app/lib/layers.ts`
+- `src/app/lib/thumbnail.ts`
+- `src/app/lib/trace-place.ts`
+- `src/app/lib/units.ts`
+- `src/app/lib/vector-preview.ts`
+- `src/app/machine/JobControls.svelte`
+- `src/app/machine/JogPad.svelte`
+- `src/app/machines/grbl/index.ts`
+- `src/app/machines/laserpecker/LaserPeckerBadge.svelte`
+- `src/app/machines/laserpecker/index.ts`
+- `src/app/machines/ruida/export.ts`
+- `src/app/machines/ruida/index.ts`
+- `src/app/machines/types.ts`
+- `src/app/state/session.svelte.ts`
+- `src/app/state/tour.ts`
+- `src/app/state/ui.svelte.ts`
+- `src/app/state/work-area.ts`
+- `src/app/tour/Tour.svelte`
+- `src/app/tour/art/TextShapes.svelte`
+- `src/app/tour/art/Welcome.svelte`
+- `src/app/unite.ts`
+- `src/app/updates/UpdateDialog.svelte`
+- `src/app/updates/updates.svelte.ts`
+- `src/app/workspace/ToolRail.svelte`
+- `src/app/workspace/TopBar.svelte`
+- `src/app/workspace/Workspace.svelte`
+- `src/lib/ui/Toaster.svelte`
+- `src/lib/ui/Toggle.svelte`
+- `src/lib/ui/TooltipHost.svelte`
+- `src/lib/ui/errors.ts`
+- `src/lib/ui/toasts.svelte.ts`
+- `src/lib/ui/tooltip.ts`
+- `src/lib/workers/protocol.ts`
+- `src/styles/tokens.css`
+- `src/vite-env.d.ts`
+- `tests/e2e/fixtures/logo.png`
+- `tests/e2e/helpers.ts`
+- `tests/e2e/laserpecker.spec.ts`
+- `tests/e2e/text-shapes.spec.ts`
+- `tests/e2e/tooltips.spec.ts`
+- `tests/e2e/tour.spec.ts`
+- `tests/e2e/trace.spec.ts`
+- `tests/e2e/updates.spec.ts`
+- `tests/unit/app/ink.test.ts`
+- `tests/unit/app/job-summary.test.ts`
+- `tests/unit/app/keys.test.ts`
+- `tests/unit/app/text-edit.test.ts`
+- `tests/unit/app/text-outlines.test.ts`
+- `tests/unit/app/tools.test.ts`
+- `tests/unit/app/tour.test.ts`
+- `tests/unit/app/trace-place.test.ts`
+- `tests/unit/app/unite.test.ts`
+- `tests/unit/app/units.test.ts`
+- `tests/unit/app/upright.test.ts`
+- `tests/unit/app/vector-preview.test.ts`
+- `tests/unit/app/viewport.test.ts`
+- `tests/unit/ui/toasts.test.ts`
+- `tests/unit/ui/tooltip.test.ts`
+- `tsconfig.json`
+- `vite.config.ts`
+
+## Validation
+
+- All 650 reference paths match LaserF Git blob hashes exactly.
+- All 435 original development file contents remain represented.
+- Git detects 425 exact renames and 216 additions (215 restored files plus this report).
+- Frozen-lockfile dependency installation passed.
+- Type checking: zero errors and zero warnings.
+- ESLint passed.
+- Unit tests: 116 files, 1,014 tests passed.
+- Production build passed.
+- Portable Python packaging tests: six passed.
+- Chromium end-to-end tests: all 80 passed using the repository Playwright suite.

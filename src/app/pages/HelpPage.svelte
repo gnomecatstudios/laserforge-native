@@ -1,0 +1,309 @@
+<script lang="ts">
+  import Bug from '@lucide/svelte/icons/bug';
+  import MessageCircle from '@lucide/svelte/icons/message-circle';
+  import Plug from '@lucide/svelte/icons/plug';
+  import Download from '@lucide/svelte/icons/download';
+  import Layers from '@lucide/svelte/icons/layers';
+  import Flame from '@lucide/svelte/icons/flame';
+  import Bluetooth from '@lucide/svelte/icons/bluetooth';
+  import RotateCw from '@lucide/svelte/icons/rotate-cw';
+  import PenTool from '@lucide/svelte/icons/pen-tool';
+  import Image from '@lucide/svelte/icons/image';
+  import Play from '@lucide/svelte/icons/play';
+  import Scan from '@lucide/svelte/icons/scan';
+  import Crosshair from '@lucide/svelte/icons/crosshair';
+  import Save from '@lucide/svelte/icons/save';
+  import Wrench from '@lucide/svelte/icons/wrench';
+  import Compass from '@lucide/svelte/icons/compass';
+  import Keyboard from '@lucide/svelte/icons/keyboard';
+  import type { Component } from 'svelte';
+  import { ISSUES_URL } from '$lib/config/app';
+  import { formatCombo } from '../lib/keys';
+  import { LISTED_SHORTCUTS } from '../shortcuts';
+  import { route } from '../state/route.svelte';
+  import { ui } from '../state/ui.svelte';
+  import PageShell from './PageShell.svelte';
+  import ConnectTroubleshooter from '../connect/ConnectTroubleshooter.svelte';
+  import Unplug from '@lucide/svelte/icons/unplug';
+
+  const topics: Array<{ icon: Component; title: string; items: string[] }> = [
+    {
+      icon: Plug,
+      title: 'Connect',
+      items: [
+        'Use Chrome, Edge, Opera or Brave on a desktop. Machine control needs Web Serial.',
+        'Connect laser, then pick the USB port, or choose Bluetooth from the button’s menu. Laser Forge finds out which laser it is (GRBL or LaserPecker) and picks a matching machine profile.',
+        'Bluetooth or USB marked “Set up” in the Connect menu opens a picture guide: a browser setting to switch on (Bluetooth on Linux and in Brave), Bluetooth to turn on, or a browser that can reach lasers.',
+        'Try the virtual machine to practise without hardware.',
+      ],
+    },
+    {
+      icon: Download,
+      title: 'Import',
+      items: [
+        'Drop SVG, DXF, PNG, JPEG, WebP, AVIF, BMP or GIF files onto the app, or use the Image tool in the toolbar above the canvas.',
+        'Ink only mode is for a photo of a pen or marker drawing. Use Import a drawing (the pen button beside the Image tool, Ctrl+Alt+I, or the Menu), or drop the photo on “Drop here for ink only mode”. The paper, shadows and uneven light go, leaving black ink on a transparent background. Undo brings back the full photo. An image already on the bed can be cleaned the same way with Ink only mode in its settings or in Bitmap mode, and phone scanning has an Ink only mode switch.',
+        'SVG sizes come from width, height and viewBox. Files from tools that export at 72 ppi can be adjusted in the import dialog.',
+        'Convert text to paths in your editor before exporting SVG.',
+        'DXF imports lines, polylines, arcs, circles, ellipses, splines and blocks. Units come from the file and can be changed in the import dialog. Explode text and hatches to outlines in your CAD tool first.',
+        'Open (⌘O) takes .olaser projects and G-code files (.gcode, .nc, .ngc), which run as they are.',
+      ],
+    },
+    {
+      icon: PenTool,
+      title: 'Text and outlines',
+      items: [
+        'Click with the Text tool and type right on the bed. Double-click a text, or select it and press Enter, to edit it in place; Esc or a click elsewhere finishes. Emptied text is removed.',
+        'The font picker lists every Google Font, plus Uploaded and System tabs. Upload TTF, OTF or WOFF files; they stay in this browser.',
+        'System fonts need Chrome or Edge: open the System tab and allow font access once.',
+        'Text keeps its outlines in the project, so it burns the same on a computer without the font.',
+        'Outline (O) draws one cut line around everything selected. A logo and a key-ring hole selected together get a single outline around both.',
+      ],
+    },
+    {
+      icon: Layers,
+      title: 'Layers',
+      items: [
+        'Line follows paths: cuts and scores. Kerf offset grows outlines and shrinks holes.',
+        'Fill engraves the inside of closed shapes with scanlines at any angle.',
+        'Layers run top to bottom. Drag rows to reorder. Objects sit under their layer and drag between layers. The bolt toggles output, the eye toggles visibility. Deleting a layer asks where its objects go.',
+        'Drag any field label left or right to scrub its value. Fields accept math like 100/3.',
+        'Dragged objects snap their edges and centres to other objects and to the bed, with a guide line. Hold Alt to move freely, Shift to keep to one axis.',
+        'Art past the work area is flagged at the top of the canvas. Move in brings it back; switching to a smaller machine does this for you.',
+        'Material picks published settings for engraving or cutting. LaserPeckers use their own tables; other lasers use the profile’s laser power. Test on a scrap first.',
+      ],
+    },
+    {
+      icon: Image,
+      title: 'Photos',
+      items: [
+        'Images go on an Image layer. Pick a dithering mode and watch the bed preview update.',
+        'Line density sets dots per inch. 254 dpi is 0.1 mm per line, a good start for diode lasers.',
+        'Grayscale maps brightness to power between Min power and Power.',
+        'Rotate images using the angle field or canvas handle. Engraving scanlines follow the image angle.',
+      ],
+    },
+    {
+      icon: Play,
+      title: 'Preview and export',
+      items: [
+        'Preview shows burns shaded by power and travel moves dashed. Press play or drag the slider.',
+        'The time is an estimate based on your machine’s acceleration settings.',
+        'Export G-code (the G-code icon at the end of the toolbar, or Menu → Export G-code) saves a file for SD cards or other senders.',
+        'Bitmap mode (next to Design and Preview) shows each photo beside its engraving and holds the dithering, tone and line density settings. Open it on one image by double-clicking the image, pressing Enter with it selected, or clicking Edit image in its settings. Done takes you back to Design. Speed, power and scan direction stay in the Layers panel.',
+        'In Bitmap mode, Separate removes backgrounds and splits a photo into layers. Click colors on the image, or drag across a gradient to pick its whole range. Subtract picks (the Subtract switch, or hold Alt) take colors back out of the selection. Then erase them to transparency, keep only them, or move them to a new layer. Repeat to peel foreground, midground and background apart.',
+        'Under the original in Bitmap mode, Colors sets the checkerboard boxes shown behind transparent and erased areas (light, dark, white, black, wood or two colors of your own) and the color of the selection highlight. Pick a backdrop that contrasts with the image so cut-out edges are easy to check.',
+      ],
+    },
+    {
+      icon: Scan,
+      title: 'Run a job',
+      items: [
+        'Frame traces the job outline with the laser off. Turn on frame power in Machine profiles if you want a faint dot.',
+        'Start job checks the machine is idle and asks you to confirm safety on the first run.',
+        'Stop, or Esc, halts the laser at once. Pause holds motion and Resume continues.',
+        'Overrides change speed and power live while a job runs.',
+      ],
+    },
+    {
+      icon: Crosshair,
+      title: 'Machine',
+      items: [
+        'Jog with the pad or arrow buttons. Home runs $H when homing is enabled.',
+        'An alarm shows what happened and what to do. Unlock ($X) clears it once the cause is fixed.',
+        'The console shows every line sent and received. Download the log when reporting a hardware bug.',
+        'Device settings lists $$ values with descriptions and saves a backup file.',
+      ],
+    },
+    {
+      icon: Flame,
+      title: 'CO₂ lasers',
+      items: [
+        'Pick your machine in the Machine panel. CO₂ machines burn at constant power (M3) and show speeds in mm/s; change either under Machine profiles.',
+        'CO₂ tubes on a GRBL board connect over USB like any other laser, and the safety check adds water cooling.',
+        'Ruida controllers (Thunder, Aeon, OMTech and most other CO₂ machines) run exported .rd files: Export .rd, copy it to a USB stick, then load, frame and start it on the laser’s panel.',
+        'Ruida jobs use bed positions: the job burns where it sits on screen.',
+      ],
+    },
+    {
+      icon: Bluetooth,
+      title: 'LaserPecker',
+      items: [
+        'Pick LaserPecker LP2 or LP3 under Machine, then Connect Bluetooth (or USB with a USB-A to USB-C cable).',
+        'The whole job burns as one image at the Power, Depth and Resolution in the panel. Jobs burn where they sit on the bed.',
+        'Frame traces the outline with the beam at its lowest power until you stop it.',
+        'If the laser refuses uploads, switch it off and on again.',
+      ],
+    },
+    {
+      icon: RotateCw,
+      title: 'Rotary and accessories',
+      items: [
+        'Add your rotary or slide under Machine profiles (LaserPecker presets come with theirs). Then pick it under Setup in the Machine panel.',
+        'On a rotary, enter the object’s diameter: the bed becomes its unrolled surface, one turn tall. Y moves are scaled for a roller or chuck, or sent on the A axis.',
+        'Each job starts with the mode G-code of its setup, so the machine switches on its own.',
+        'Machines with two lasers list them under Machine profiles. Each layer then picks its laser, and the job switches between them with the laser off.',
+      ],
+    },
+    {
+      icon: Save,
+      title: 'Files',
+      items: [
+        'Projects autosave in this browser and appear under Recent projects.',
+        'Save writes a .olaser file with all images inside. Open it on any computer.',
+        'Machine profiles export and import as .json files.',
+        'Print template prints the design at actual size for test fits and alignment.',
+      ],
+    },
+    {
+      icon: Wrench,
+      title: 'Troubleshooting',
+      items: [
+        'Laser stays on between shapes: enable laser mode ($32=1) from the machine panel.',
+        'Error 20 or 22: the machine rejected a command. Check the console for the line.',
+        'Alarm 1 or 2: a limit was hit. Unlock, home, and check the job fits the bed.',
+        'Job looks mirrored: set the origin corner in Machine profiles to match your machine.',
+      ],
+    },
+  ];
+</script>
+
+<PageShell title="Help">
+  <div class="contact">
+    <a class="card" href={ISSUES_URL} target="_blank" rel="noopener">
+      <Bug size={20} />
+      <span><strong>Report a problem</strong><span class="muted">Open an issue on GitHub</span></span>
+    </a>
+    <a class="card" href={ISSUES_URL} target="_blank" rel="noopener">
+      <MessageCircle size={20} />
+      <span><strong>Everything else</strong><span class="muted">Ask a question on GitHub</span></span>
+    </a>
+    <button
+      type="button"
+      class="card"
+      onclick={() => {
+        route.go('app');
+        ui.tourOpen = true;
+      }}
+    >
+      <Compass size={20} />
+      <span><strong>Take the tour</strong><span class="muted">A visual walk through every feature</span></span
+      >
+    </button>
+  </div>
+
+  {#each topics as topic (topic.title)}
+    <section>
+      <h2><topic.icon size={18} />{topic.title}</h2>
+      <ul>
+        {#each topic.items as item (item)}<li>{item}</li>{/each}
+      </ul>
+    </section>
+  {/each}
+
+  <section id="machine-not-showing-up" data-testid="help-connect">
+    <h2><Unplug size={18} />Machine not showing up</h2>
+    <ConnectTroubleshooter />
+  </section>
+
+  <section>
+    <h2><Keyboard size={18} />Keyboard shortcuts</h2>
+    <dl class="keys">
+      {#each LISTED_SHORTCUTS as s (s.label)}
+        <div>
+          <dt>{s.label}</dt>
+          <dd>
+            {#each s.keys as k (k)}<kbd class="kbd">{formatCombo(k)}</kbd>{/each}
+          </dd>
+        </div>
+      {/each}
+    </dl>
+  </section>
+</PageShell>
+
+<style>
+  .contact {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 12px;
+    margin-bottom: 36px;
+  }
+
+  .card {
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+    padding: 16px;
+    border-radius: var(--ol-radius-lg);
+    border: 1px solid var(--ol-border);
+    background: var(--ol-surface);
+    color: var(--ol-text);
+    text-decoration: none;
+    text-align: left;
+    font: inherit;
+  }
+
+  .card:hover {
+    border-color: var(--ol-border-strong);
+  }
+
+  .card :global(svg) {
+    color: var(--ol-signal);
+    flex-shrink: 0;
+  }
+
+  .card span {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  section {
+    margin-bottom: 28px;
+  }
+
+  h2 {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: var(--ol-fs-xl);
+    font-weight: 600;
+    margin-bottom: 10px;
+  }
+
+  h2 :global(svg) {
+    color: var(--ol-text-muted);
+  }
+
+  ul {
+    margin: 0;
+    padding-left: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    color: var(--ol-text-2);
+    line-height: 1.55;
+    font-size: 14px;
+  }
+
+  .keys {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 4px 24px;
+    margin: 0;
+  }
+
+  .keys div {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 4px 0;
+    border-bottom: 1px solid var(--ol-border);
+  }
+
+  dd {
+    margin: 0;
+    display: flex;
+    gap: 4px;
+  }
+</style>
