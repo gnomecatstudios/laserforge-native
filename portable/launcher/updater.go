@@ -27,10 +27,11 @@ import (
 )
 
 // Updates come only from the native app's own releases, never from the browser-tab
-// Laser Forge releases, which would replace the app-window launcher.
+// Laser Forge releases, which would replace the app-window launcher. They use the
+// public release pages, not api.github.com: its anonymous limit of 60 requests an
+// hour per IP address runs out on shared networks and blocked every update.
 const releaseRepo = "gnomecatstudios/laserforge-native"
 const releaseBase = "https://github.com/" + releaseRepo + "/releases"
-const releaseAPI = "https://api.github.com/repos/" + releaseRepo + "/releases/latest"
 const maxUpdate = 128 << 20
 
 type installation struct {
@@ -128,7 +129,7 @@ func updateFetch(url string, limit int64) ([]byte, error) {
 	}
 	defer res.Body.Close()
 	if res.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("update download failed (%d)", res.StatusCode)
+		return nil, httpFailure("update download", res.StatusCode)
 	}
 	data, err := io.ReadAll(io.LimitReader(res.Body, limit+1))
 	if err != nil {
@@ -139,65 +140,67 @@ func updateFetch(url string, limit int64) ([]byte, error) {
 	}
 	return data, nil
 }
-func verifiedDownload(current installation, cached ...[]byte) ([]byte, string, error) {
-	data, err := updateFetch(releaseAPI, 1<<20)
+func httpFailure(action string, status int) error {
+	if status == http.StatusForbidden || status == http.StatusTooManyRequests {
+		return fmt.Errorf("GitHub is limiting update requests from this network (%d); try again later", status)
+	}
+	return fmt.Errorf("%s failed (%d)", action, status)
+}
+
+// latestVersion reads the newest stable release from the /releases/latest redirect,
+// which skips drafts and prereleases just as the REST API does.
+func latestVersion() (string, error) {
+	client := &http.Client{Timeout: 15 * time.Second, CheckRedirect: func(*http.Request, []*http.Request) error {
+		return http.ErrUseLastResponse
+	}}
+	req, err := http.NewRequest("GET", releaseBase+"/latest", nil)
 	if err != nil {
-		return nil, "", err
+		return "", err
 	}
-	var release struct {
-		Tag        string `json:"tag_name"`
-		URL        string `json:"html_url"`
-		Draft      bool   `json:"draft"`
-		Prerelease bool   `json:"prerelease"`
-		Assets     []struct {
-			Name  string `json:"name"`
-			URL   string `json:"browser_download_url"`
-			Size  int64  `json:"size"`
-			State string `json:"state"`
-		} `json:"assets"`
+	req.Header.Set("User-Agent", "LaserForge-Native-Updater")
+	res, err := client.Do(req)
+	if err != nil {
+		return "", err
 	}
-	if err = json.Unmarshal(data, &release); err != nil {
-		return nil, "", err
+	res.Body.Close()
+	if res.StatusCode < 300 || res.StatusCode > 399 {
+		return "", httpFailure("update check", res.StatusCode)
 	}
-	version := strings.TrimPrefix(release.Tag, "v")
-	if release.Draft || release.Prerelease || release.Tag != "v"+version || release.URL != releaseBase+"/tag/"+release.Tag {
-		return nil, "", errors.New("invalid release")
+	location, err := res.Location()
+	if err != nil {
+		return "", errors.New("invalid release redirect")
+	}
+	tag, found := strings.CutPrefix(location.String(), releaseBase+"/tag/")
+	version := strings.TrimPrefix(tag, "v")
+	if !found || tag != "v"+version {
+		return "", errors.New("invalid release")
 	}
 	if _, err = stableVersion(version); err != nil {
+		return "", err
+	}
+	return version, nil
+}
+func packageName(platform, version string) string {
+	short := map[string]string{"raspberry-pi-arm64": "RPi-ARM64", "raspberry-pi-arm32": "RPi-ARM32"}[platform]
+	if short == "" {
+		short = platform
+	}
+	return "LaserForge-Portable-" + short + "-v" + version + ".zip"
+}
+
+// verifiedDownload returns the newer release package for this installation after
+// checking it against the release's SHA256SUMS.txt, or nil when already current.
+func verifiedDownload(current installation, cached ...[]byte) ([]byte, string, error) {
+	version, err := latestVersion()
+	if err != nil {
 		return nil, "", err
 	}
 	if !newer(version, current.Version) {
 		return nil, "", nil
 	}
-	short := map[string]string{"raspberry-pi-arm64": "RPi-ARM64", "raspberry-pi-arm32": "RPi-ARM32"}[current.Platform]
-	if short == "" {
-		short = current.Platform
-	}
-	name := "LaserForge-Portable-" + short + "-v" + version + ".zip"
-	asset := func(name string) (string, int64, error) {
-		expected := releaseBase + "/download/" + release.Tag + "/" + name
-		count := 0
-		var size int64
-		for _, a := range release.Assets {
-			if a.Name == name && a.URL == expected && a.State == "uploaded" && a.Size > 0 && a.Size <= maxUpdate {
-				count++
-				size = a.Size
-			}
-		}
-		if count != 1 {
-			return "", 0, fmt.Errorf("missing or invalid asset: %s", name)
-		}
-		return expected, size, nil
-	}
-	url, size, err := asset(name)
-	if err != nil {
-		return nil, "", err
-	}
-	sumsURL, _, err := asset("SHA256SUMS.txt")
-	if err != nil {
-		return nil, "", err
-	}
-	sums, err := updateFetch(sumsURL, 64<<10)
+	download := releaseBase + "/download/v" + version + "/"
+	name := packageName(current.Platform, version)
+	sums, err := updateFetch(download+"SHA256SUMS.txt", 64<<10)
 	if err != nil {
 		return nil, "", err
 	}
@@ -218,14 +221,14 @@ func verifiedDownload(current installation, cached ...[]byte) ([]byte, string, e
 	if len(cached) > 0 {
 		payload = cached[0]
 	} else {
-		payload, err = updateFetch(url, maxUpdate)
+		payload, err = updateFetch(download+name, maxUpdate)
 		if err != nil {
 			return nil, "", err
 		}
 	}
 	actual := sha256.Sum256(payload)
-	if int64(len(payload)) != size || !bytes.Equal(actual[:], hash) {
-		return nil, "", errors.New("update checksum/size mismatch")
+	if !bytes.Equal(actual[:], hash) {
+		return nil, "", errors.New("update checksum mismatch")
 	}
 	return payload, version, nil
 }
@@ -376,6 +379,18 @@ func (u *updateState) handle(w http.ResponseWriter, r *http.Request) {
 	}
 	if r.Header.Get("Origin") != "http://127.0.0.1:5190" || r.Header.Get("X-LaserForge-Update") != u.Token {
 		http.Error(w, "invalid update request", 403)
+		return
+	}
+	if r.URL.Query().Get("action") == "check" {
+		// The app asks the launcher so its update check avoids the rate-limited API too.
+		// Unlocked: status polling continues during the request.
+		version, err := latestVersion()
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadGateway)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]string{"version": version})
 		return
 	}
 	u.Lock()

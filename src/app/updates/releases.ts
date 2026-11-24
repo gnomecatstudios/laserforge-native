@@ -36,6 +36,19 @@ export function isNewer(candidate: string, current: string): boolean {
   return false;
 }
 
+function packagePlatform(platform: Platform): string {
+  return platform === 'raspberry-pi-arm64' ? 'RPi-ARM64' : platform === 'raspberry-pi-arm32' ? 'RPi-ARM32' : platform;
+}
+
+/** The release the native launcher found, with this platform's package from its release page. */
+export function nativeRelease(version: string, platform: Platform): Release {
+  if (!versionParts(version)) throw new Error('Invalid release');
+  const base = `https://github.com/${DOWNLOAD_REPO}/releases`;
+  const tag = `v${version}`;
+  const name = `LaserForge-Portable-${packagePlatform(platform)}-${tag}.zip`;
+  return { version, url: `${base}/tag/${tag}`, downloads: { [platform]: `${base}/download/${tag}/${name}` } };
+}
+
 /** Only stable releases and exact package URLs from our public downloads repository. */
 export function parseRelease(value: unknown): Release {
   if (!value || typeof value !== 'object') throw new Error('Invalid release');
@@ -55,7 +68,7 @@ export function parseRelease(value: unknown): Release {
   if (data.html_url !== `${base}/tag/${tag}`) throw new Error('Invalid release URL');
   const downloads: Release['downloads'] = {};
   for (const platform of Object.keys(PLATFORMS) as Platform[]) {
-    const short = platform === 'raspberry-pi-arm64' ? 'RPi-ARM64' : platform === 'raspberry-pi-arm32' ? 'RPi-ARM32' : platform;
+    const short = packagePlatform(platform);
     for (const suffix of new Set([`${short}-${tag}`, `${platform}-${tag}`, short, platform])) {
     const name = `LaserForge-Portable-${suffix}.zip`;
     const url = `${base}/download/${tag}/${name}`;

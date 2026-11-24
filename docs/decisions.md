@@ -328,6 +328,7 @@ Every step has a small illustration of what to look for, because many users of t
 - A new app version in `package.json` must be built and released under the same `vX.Y.Z` tag. The publishing script validates embedded platform/version metadata, excludes source archives and source maps, stages assets in a draft release, and publishes only after every upload succeeds. Older packages need one manual upgrade to gain the popup.
 
 - The public downloads repository is `gnomecatstudios/LaserForgeDownloads`. Version 0.2.1 corrects the feed and package URLs; earlier packages require a manual upgrade because their update checks used the uncreated repository name.
+- **Update checks avoid GitHub's REST API.** Anonymous `api.github.com` requests are limited to 60 an hour per IP address. Shared networks ran out, so checks and downloads failed with 403. The native launcher and `update.py` now read the newest stable tag from the `github.com/<repo>/releases/latest` redirect, which also skips drafts and prereleases. They fetch `SHA256SUMS.txt` and the package from that tag's download URLs. The SHA-256 check is unchanged. The app asks the launcher (`POST /api/portable-update?action=check`) instead of calling the API itself. Only builds without the native launcher still use the API. Packages up to v3.0.2 still use the API and need one manual upgrade if it stays rate-limited.
 
 ## Layout tools and editable text baselines
 

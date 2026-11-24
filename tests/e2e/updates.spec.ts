@@ -130,12 +130,47 @@ test('pending automatic notification never covers connected machine controls', a
   await expect(page.getByTestId('update-dialog')).toContainText('Update available');
 });
 
+test('native launcher checks for updates while GitHub rate-limits its API', async ({ page }) => {
+  await portable(page, 'windows-x64');
+  let apiChecks = 0;
+  await page.route(api, (r) => {
+    apiChecks++;
+    return r.fulfill({ status: 403, json: { message: 'API rate limit exceeded' } });
+  });
+  let latest: string | null = '3.1.0';
+  await page.route('**/api/portable-update**', (r) => {
+    if (r.request().method() === 'GET') return r.fulfill({ json: { token: 't', status: 'idle' } });
+    expect(new URL(r.request().url()).searchParams.get('action')).toBe('check');
+    expect(r.request().headers()['x-laserforge-update']).toBe('t');
+    return latest ? r.fulfill({ json: { version: latest } }) : r.fulfill({ status: 502, body: 'offline' });
+  });
+  await page.goto('/');
+  const popup = page.getByTestId('update-dialog');
+  await expect(popup).toContainText('Laser Forge 3.1.0 is ready to download.');
+  await expect(popup.getByRole('button', { name: 'Download update' })).toBeEnabled();
+  await expect(popup.getByRole('link', { name: 'Release notes and installation instructions' })).toHaveAttribute(
+    'href',
+    `${repo}/tag/v3.1.0`,
+  );
+  await popup.getByRole('button', { name: 'Later' }).click();
+  latest = null;
+  await page
+    .getByRole('navigation', { name: 'Main' })
+    .getByRole('button', { name: 'About', exact: true })
+    .click();
+  await page.getByRole('button', { name: 'Check for updates' }).click();
+  await expect(popup).toContainText('Could not check for updates');
+  expect(apiChecks).toBe(0);
+});
+
 test('installing disconnects an idle laser automatically', async ({ page }) => {
   await portable(page);
   const posts: string[] = [];
   await page.route('**/api/portable-update**', async (r) => {
     if (r.request().method() === 'POST') {
-      posts.push(new URL(r.request().url()).searchParams.get('action') ?? '');
+      const action = new URL(r.request().url()).searchParams.get('action') ?? '';
+      if (action === 'check') return r.fulfill({ json: { version: '3.1.0' } });
+      posts.push(action);
       await r.fulfill({ status: 200, body: 'ok' });
     } else {
       await r.fulfill({ json: { token: 't', status: 'ready', version: '3.1.0' } });
