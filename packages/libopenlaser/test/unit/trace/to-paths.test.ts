@@ -26,7 +26,7 @@ describe('traceLayersToPaths', () => {
 
   it('reports colors as #rrggbb with 0–1 rgb, bottom layer first', () => {
     const px = picture(30, 20, [255, 255, 255, 255], [box(5, 5, 25, 15, [255, 0, 0, 255])]);
-    const result = traceImage(px, { ...tracePreset('logo').options, colors: 2 });
+    const result = traceImage(px, { ...tracePreset('logo').options, colors: 2, ignoreBackground: false });
     const layers = traceLayersToPaths(result, 30, 20);
     expect(layers.map((l) => l.color)).toEqual(['#ffffff', '#ff0000']);
     for (const l of layers) {

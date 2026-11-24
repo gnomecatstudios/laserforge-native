@@ -15,7 +15,7 @@ const base: TraceOptions = {
   smoothness: 40,
   corners: 55,
   stacked: false,
-  ignoreBackground: false,
+  ignoreBackground: true,
   denoise: 0,
 };
 
