@@ -77,6 +77,7 @@
     | 'divider'
     | 'shapes'
     | 'image'
+    | 'phone'
     | 'drawing'
     | 'outline';
 
@@ -91,6 +92,7 @@
     'shapes',
     { id: 'text', label: 'Text', key: 'T', icon: Type, design: true },
     'image',
+    'phone',
     'drawing',
     'divider',
     'outline',
@@ -114,6 +116,15 @@
         disabled={!designing}
         onclick={() => actions.importArt()}
         data-testid="tool-image"><ImagePlus size={18} /></button
+      >
+    {:else if tool === 'phone'}
+      <button
+        type="button"
+        class="icon-btn tool"
+        aria-label="Scan art with phone"
+        title="Scan art with phone: show a QR code, then photograph your art"
+        onclick={() => void openPhoneCapture()}
+        data-testid="phone-scan"><ScanQrCode size={18} /></button
       >
     {:else if tool === 'drawing'}
       <button
@@ -273,16 +284,6 @@
       <path d="M14 2v6h6" />
       <path d="M15 13a3 3 0 1 0 0 4v-2h-2" />
     </svg>
-  </button>
-  <button
-    type="button"
-    class="icon-btn tool"
-    aria-label="Scan art with phone"
-    title="Scan art with phone: show a QR code, then photograph your art"
-    onclick={() => void openPhoneCapture()}
-    data-testid="phone-scan"
-  >
-    <ScanQrCode size={18} />
   </button>
 </nav>
 

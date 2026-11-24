@@ -237,6 +237,19 @@ test('the Image tool sits with the other tools and takes SVG and images', async 
   await expect(page.getByTestId('empty-hint')).toContainText('drop files here');
 });
 
+test('Scan art with phone sits right beside the Image upload', async ({ page }) => {
+  await newProject(page);
+  const rail = page.getByRole('navigation', { name: 'Tools' });
+  const image = (await rail.getByTestId('tool-image').boundingBox())!;
+  const phone = (await rail.getByTestId('phone-scan').boundingBox())!;
+  const exportBtn = (await rail.getByTestId('export-gcode').boundingBox())!;
+  expect(phone.y).toBe(image.y);
+  // Next to Image, with no other tool in between, and ahead of Export.
+  expect(phone.x).toBeGreaterThan(image.x);
+  expect(phone.x - (image.x + image.width)).toBeLessThan(image.width / 2);
+  expect(phone.x).toBeLessThan(exportBtn.x);
+});
+
 test('Open takes projects and G-code only', async ({ page }) => {
   await newProject(page);
   const [chooser] = await Promise.all([
