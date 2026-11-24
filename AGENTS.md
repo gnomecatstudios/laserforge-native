@@ -15,3 +15,6 @@ on all four targets (`scripts/build-portable.py`, then `scripts/verify-portable-
 (`.github/workflows/portable-build.yml`) on `main` with `publish: true`. That run bumps the
 version, commits the verified ZIPs to `portable/downloads`, and creates the GitHub release.
 A plain push to `main` only builds the packages; it does not publish them.
+A publish run only publishes while its commit is still `main`'s head. If `main` moves first,
+the run stops with a "main moved" error. Do not re-run it, because a re-run builds the same
+old commit. Dispatch a new publish run on `main` instead.

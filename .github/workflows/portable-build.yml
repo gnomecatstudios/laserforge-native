@@ -9,7 +9,12 @@ on:
   push:
     branches: [main]
 concurrency:
-  group: portable-release-${{ github.ref }}
+  # Publish runs queue only behind other publish runs. A plain push build in the same group
+  # would delay a publish run (giving main more time to move under it) and could replace a
+  # queued one. GitHub keeps one pending run per group, so a newer publish dispatch already
+  # replaces a queued older one. A running publish is never cancelled: stopping it between
+  # the push and the release would leave main bumped to a version that has no release.
+  group: portable-${{ github.event_name == 'workflow_dispatch' && inputs.publish && 'release' || 'build' }}-${{ github.ref }}
   cancel-in-progress: false
 permissions:
   contents: write
@@ -18,6 +23,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      # The ZIPs are built from this run's commit and pushed on top of it, so they can only
+      # be published while that commit is still main's head. Fail before building if a
+      # queued run's commit is already stale; the publish step checks again at the end.
+      - name: Confirm this commit is still main's head
+        if: github.ref == 'refs/heads/main' && github.event_name == 'workflow_dispatch' && inputs.publish
+        run: python3 scripts/check-publish-head.py "$GITHUB_SHA"
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
         with:
@@ -76,13 +87,21 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           version=$(node -p "require('./package.json').version")
+          # main may have moved while the packages built. Stop with a clear message rather
+          # than publish ZIPs that do not match the source at main's head.
+          python3 scripts/check-publish-head.py "$GITHUB_SHA"
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add package.json README.md portable/README.md portable/raspberry-pi.md portable/public-downloads-README.md
           git add -A portable/downloads
           if ! git diff --cached --quiet; then
             git commit -m "Refresh verified portable distributions v$version"
-            git push origin HEAD:main
+            # Never force: a plain push only fast-forwards main, so it is refused if main
+            # moved after the check above. Explain that case; other failures keep git's error.
+            if ! git push origin HEAD:main; then
+              python3 scripts/check-publish-head.py "$GITHUB_SHA"
+              exit 1
+            fi
           fi
           gh release create "v$version" portable/downloads/*.zip portable/downloads/SHA256SUMS.txt --target "$(git rev-parse HEAD)" --title "Laser Forge v$version" --generate-notes
 
