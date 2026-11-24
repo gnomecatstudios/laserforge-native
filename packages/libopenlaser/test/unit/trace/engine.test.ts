@@ -15,10 +15,12 @@ const maskOf = (w: number, h: number, f: (x: number, y: number) => boolean) => {
   return m;
 };
 
-// The laser presets turn stacking off; the engine tests keep curvesmith's stacked default.
+// The laser presets turn stacking off and drop the background; the engine tests keep curvesmith's
+// stacked default and trace every color.
 const opts = (patch: Partial<TraceOptions> = {}): TraceOptions => ({
   ...tracePreset('logo').options,
   stacked: true,
+  ignoreBackground: false,
   ...patch,
 });
 

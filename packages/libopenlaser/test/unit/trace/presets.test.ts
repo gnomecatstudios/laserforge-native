@@ -7,6 +7,10 @@ describe('trace presets', () => {
     for (const p of TRACE_PRESETS) expect(p.options.stacked, p.id).toBe(false);
   });
 
+  it('drop the background color by default', () => {
+    for (const p of TRACE_PRESETS) expect(p.options.ignoreBackground, p.id).toBe(true);
+  });
+
   it('looks presets up by id', () => {
     for (const p of TRACE_PRESETS) expect(tracePreset(p.id)).toBe(p);
   });
