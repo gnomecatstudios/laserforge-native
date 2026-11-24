@@ -9,12 +9,12 @@ Windows; desktop Raspberry Pi OS includes Chromium), which is not bundled.
 
 | System | Download |
 | --- | --- |
-| Windows x64 | [Portable ZIP](https://github.com/gnomecatstudios/laserforge-native/releases/latest) |
-| Linux x64 | [Portable ZIP](https://github.com/gnomecatstudios/laserforge-native/releases/latest) |
-| Raspberry Pi OS 64-bit (ARM64) | [Portable ZIP](https://github.com/gnomecatstudios/laserforge-native/releases/latest) |
-| Raspberry Pi OS 32-bit (ARMv6+) | [Portable ZIP](https://github.com/gnomecatstudios/laserforge-native/releases/latest) |
+| Windows x64 | [Portable ZIP](https://github.com/gnomecatstudios/laserforge-native/releases/download/v3.0.0/LaserForge-Portable-windows-x64-v3.0.0.zip) |
+| Linux x64 | [Portable ZIP](https://github.com/gnomecatstudios/laserforge-native/releases/download/v3.0.0/LaserForge-Portable-linux-x64-v3.0.0.zip) |
+| Raspberry Pi OS 64-bit (ARM64) | [Portable ZIP](https://github.com/gnomecatstudios/laserforge-native/releases/download/v3.0.0/LaserForge-Portable-RPi-ARM64-v3.0.0.zip) |
+| Raspberry Pi OS 32-bit (ARMv6+) | [Portable ZIP](https://github.com/gnomecatstudios/laserforge-native/releases/download/v3.0.0/LaserForge-Portable-RPi-ARM32-v3.0.0.zip) |
 
-[SHA-256 checksums](https://github.com/gnomecatstudios/laserforge-native/releases/latest/download/SHA256SUMS.txt)
+[SHA-256 checksums](https://github.com/gnomecatstudios/laserforge-native/releases/download/v3.0.0/SHA256SUMS.txt)
 
 For Raspberry Pi setup and architecture selection, see [Raspberry Pi](raspberry-pi.md).
 
