@@ -410,9 +410,16 @@ cutout nesting requires one line layer and optimized inner-before-outer ordering
 
 ## Color separation in Bitmap mode
 
-Bitmap mode's Separate tab keys colors out of an image: erase them to transparency, keep only
+Bitmap mode's Separate panel keys colors out of an image: erase them to transparency, keep only
 them, or move them to a new layer. Repeating it splits a photo into foreground, midground and
 background layers.
+
+- **Engraving settings live in Design, not Bitmap mode.** Dithering, line density and tone are
+  layer settings, edited in the Layers panel, and the bed shows the dithered result as they change.
+  Bitmap mode has no Engrave tab: it is only for separating, and shows the processed engraving
+  beside the original as a read-only preview. While it is open the Layers panel leaves out
+  dithering, line density and tone (keeping speed, power and scan settings) and links to Design. The per-image parts of the old Engrave tab, the
+  low-resolution warning and "Give this image its own settings", are in Design's Image section.
 
 - **New pixels, not a stored mask.** A separation writes new PNG assets (cropped to what each
   part keeps) and updates or adds image objects. The project format, CAM, canvas and archives
@@ -433,7 +440,7 @@ background layers.
   subtract matches scale the add weight down. Invert comes last, and only subtract picks select
   nothing. Each mode has its own tolerance and softness. Per-pick masks are cached on the preview,
   so adding, removing or switching one pick doesn't re-measure the others. Pick changes have their
-  own undo history, used before the project's while the Separate tab is open. Applying a separation
+  own undo history, used before the project's while Bitmap mode is open. Applying a separation
   clears it.
 - **View colors belong to the viewer.** The checkerboard boxes behind transparent pixels and the
   selection highlight take their colors from the preferences (`bitmapView`), set with the Colors

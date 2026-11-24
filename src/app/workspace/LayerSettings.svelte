@@ -1,4 +1,5 @@
 <script lang="ts">
+  import RotateCcw from '@lucide/svelte/icons/rotate-ccw';
   import { lineLimit } from 'libopenlaser/cam';
   import NumberField from '$lib/ui/NumberField.svelte';
   import Toggle from '$lib/ui/Toggle.svelte';
@@ -26,17 +27,11 @@
 
   let { layer }: { layer: Layer } = $props();
   /**
-   * In Bitmap mode the image's line density, dithering and tone sit beside its preview, so they
-   * are not shown here as well. Machine settings (speed, power, scan direction) stay here.
+   * An image's engraving settings (line density, dithering, tone) are edited in Design. Bitmap mode
+   * is for separating colors, so while it is open they are left out here; the machine settings
+   * (speed, power, scan direction) stay.
    */
-  const toneInBitmap = $derived(
-    editor.view === 'bitmap' &&
-      layer.mode === 'image' &&
-      (editor.project?.objects.some(
-        (o) => o.kind === 'image' && o.layerId === layer.id && editor.selection.has(o.id),
-      ) ??
-        false),
-  );
+  const engraveInDesign = $derived(editor.view === 'bitmap' && layer.mode === 'image');
 
   const line = $derived(layer.line ?? DEFAULT_LINE_SETTINGS);
   const fill = $derived(layer.fill ?? DEFAULT_FILL_SETTINGS);
@@ -81,6 +76,22 @@
   const setImage = (c: Partial<ImageSettings>, live: boolean, f: string) =>
     set({ image: { ...image, ...c } }, live, f);
   const setMode = (mode: LayerMode) => set(withMode(layer, mode), false, 'mode');
+
+  /** Brightness, contrast, gamma, threshold and invert back to their defaults, in one undo step. */
+  function resetTone() {
+    const d = DEFAULT_IMAGE_SETTINGS;
+    setImage(
+      {
+        brightness: d.brightness,
+        contrast: d.contrast,
+        gamma: d.gamma,
+        threshold: d.threshold,
+        invert: d.invert,
+      },
+      false,
+      'reset',
+    );
+  }
 </script>
 
 <div class="settings" data-testid="layer-settings">
@@ -219,7 +230,7 @@
         step={1}
         onchange={(v, l) => set({ minPower: v }, l, 'minPower')}
       />
-      {#if !toneInBitmap}
+      {#if !engraveInDesign}
         <NumberField
           label="Line density"
           hint="Scan lines per inch. Higher is finer and slower"
@@ -229,6 +240,7 @@
           max={1270}
           step={1}
           onchange={(v, l) => setImage({ dpi: v }, l, 'dpi')}
+          testid="layer-dpi"
         />
       {/if}
       <NumberField
@@ -246,10 +258,16 @@
   </div>
 
   {#if layer.mode === 'image'}
-    {#if toneInBitmap}
-      <p class="tone-note" data-testid="layer-tone-in-bitmap">
-        Dithering, line density and tone are on the Engrave tab, beside the preview.
-      </p>
+    {#if engraveInDesign}
+      <div class="in-design" data-testid="layer-engrave-in-design">
+        <p>Dithering, line density and tone are set in Design.</p>
+        <button
+          type="button"
+          class="btn small"
+          onclick={() => (editor.view = 'design')}
+          data-testid="layer-engrave-open-design">Go to Design</button
+        >
+      </div>
     {:else}
       <label class="field" title="How gray tones become dots. Grayscale varies the power per pixel">
         Dithering
@@ -283,6 +301,7 @@
           max={100}
           step={1}
           onchange={(v, l) => setImage({ brightness: v }, l, 'brightness')}
+          testid="layer-brightness"
         />
         <NumberField
           label="Contrast"
@@ -330,10 +349,10 @@
           onchange={(c) => setImage({ bidirectional: c }, false, 'bidi')}
         />
       {/if}
-      {#if !toneInBitmap}
+      {#if !engraveInDesign}
         <Toggle
           label="Invert"
-          hint="Burns the light areas and leaves the dark ones"
+          hint="Burns the light areas and leaves the dark ones. For glass, slate and anodized metal"
           checked={image.invert}
           onchange={(c) => setImage({ invert: c }, false, 'invert')}
         />
@@ -345,6 +364,11 @@
         />
       {/if}
     </div>
+    {#if !engraveInDesign}
+      <button type="button" class="btn ghost reset" onclick={resetTone} data-testid="layer-reset-tone">
+        <RotateCcw size={15} />Reset tone
+      </button>
+    {/if}
   {:else if layer.mode === 'fill' && scan}
     <div class="toggles">
       <Toggle
@@ -400,10 +424,21 @@
     column-gap: 16px;
   }
 
-  .tone-note {
-    margin: 0;
+  .reset {
+    align-self: flex-start;
+  }
+
+  .in-design {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
     font-size: var(--ol-fs-sm);
     color: var(--ol-text-muted);
+  }
+
+  .in-design p {
+    margin: 0;
   }
 
   .note {

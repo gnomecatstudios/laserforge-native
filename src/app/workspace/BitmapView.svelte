@@ -1,35 +1,29 @@
 <script lang="ts">
   /**
-   * Bitmap mode: photo and raster prep for the project's images. Shows the original next to the
-   * engraving it becomes at the layer's line density, with the processing settings beside them.
-   * Settings belong to the image's layer, the same ones the Layers panel edits.
+   * Bitmap mode: color separation for the project's images. Shows the original, where colors are
+   * picked, next to the engraving it becomes at the layer's line density. The engraving settings
+   * (dithering, line density, tone) belong to the image's layer and are edited in Design, in the
+   * Layers panel.
    */
   import ImagePlus from '@lucide/svelte/icons/image-plus';
   import Wand from '@lucide/svelte/icons/wand-sparkles';
   import PenLine from '@lucide/svelte/icons/pen-line';
-  import RotateCcw from '@lucide/svelte/icons/rotate-ccw';
   import Check from '@lucide/svelte/icons/check';
-  import Split from '@lucide/svelte/icons/split';
-  import { toast } from '$lib/ui/toasts.svelte';
-  import NumberField from '$lib/ui/NumberField.svelte';
-  import Toggle from '$lib/ui/Toggle.svelte';
   import { DEFAULT_IMAGE_SETTINGS } from 'libopenlaser/cam';
-  import { updateLayer } from 'libopenlaser/project';
-  import type { DitherAlgorithm, ImageObject, ImageSettings, Layer } from 'libopenlaser/project';
+  import type { ImageObject, ImageSettings, Layer } from 'libopenlaser/project';
   import { reportError } from '$lib/ui/errors';
   import { editor } from '../state/editor.svelte';
   import { ui } from '../state/ui.svelte';
   import * as actions from '../actions';
   import { ditherInWorker } from '../lib/cam-client';
-  import { DITHER_ALGORITHMS } from '../lib/dither-options';
-  import { withMode } from '../lib/layers';
   import { Separation, separationFocus, type SeparationShow } from './separation.svelte';
   import SeparationCanvas from './SeparationCanvas.svelte';
   import SeparatePanel from './SeparatePanel.svelte';
   import ViewColors from './ViewColors.svelte';
   import BedThumbnail from './BedThumbnail.svelte';
 
-  type Compare = 'split' | 'original' | 'processed';
+  /** Colors are picked on the original, so it always shows; the engraving can show beside it. */
+  type Compare = 'split' | 'original';
 
   const SHOW: Array<[SeparationShow, string, string]> = [
     ['highlight', 'Highlight', 'Tint the selection over the whole image'],
@@ -65,11 +59,6 @@
     cols: Math.max(1, Math.round((sizeMm.w * settings.dpi) / 25.4)),
     rows: Math.max(1, Math.round((sizeMm.h * settings.dpi) / 25.4)),
   });
-  /** Source pixels per inch at the placed size; below the line density the image is upscaled. */
-  const sourceDpi = $derived(
-    asset?.widthPx && sizeMm.w > 0 ? Math.round(asset.widthPx / (sizeMm.w / 25.4)) : null,
-  );
-
   let compare = $state<Compare>('split');
   let cleaning = $state(false);
 
@@ -81,10 +70,6 @@
       cleaning = false;
     }
   }
-  /** Engrave settings, or color separation. */
-  let tab = $state<'engrave' | 'separate'>('engrave');
-  const separating = $derived(tab === 'separate');
-
   // The original is drawn from a small decoded copy, which also previews color selections.
   const separation = new Separation();
   let share = $state(0);
@@ -104,20 +89,13 @@
       separation.reset();
     }
   });
-  // While Separate is open, undo and redo step through the picks before the project.
+  // While Bitmap mode is open, undo and redo step through the picks before the project.
   $effect(() => {
-    if (!separating) return;
     separationFocus.current = separation;
     return () => {
       if (separationFocus.current === separation) separationFocus.current = null;
     };
   });
-
-  function showTab(next: 'engrave' | 'separate') {
-    tab = next;
-    // Colors are picked on the original, so it has to be in view.
-    if (next === 'separate' && compare === 'processed') compare = 'split';
-  }
 
   // Processed preview: dithered in the worker, debounced while settings are scrubbed.
   let canvas = $state<HTMLCanvasElement | null>(null);
@@ -170,55 +148,12 @@
     target.getContext('2d')?.putImageData(new ImageData(pixels, result.width, result.height), 0, 0);
   });
 
-  function setImage(change: Partial<ImageSettings>, live = false, field = 'x') {
-    if (!layer) return;
-    const id = layer.id;
-    const next = { ...settings, ...change };
-    editor.commit((p) => updateLayer(p, id, { image: next }), { coalesce: `layer-${id}-${field}` });
-    if (!live) editor.sealHistory();
-  }
-
-  function useImageMode() {
-    if (!layer) return;
-    const id = layer.id;
-    const patch = withMode(layer, 'image');
-    editor.commit((p) => updateLayer(p, id, patch));
-    editor.sealHistory();
-  }
-
-  function resetTone() {
-    const d = DEFAULT_IMAGE_SETTINGS;
-    setImage(
-      {
-        brightness: d.brightness,
-        contrast: d.contrast,
-        gamma: d.gamma,
-        threshold: d.threshold,
-        invert: d.invert,
-      },
-      false,
-      'reset',
-    );
-  }
-
   // The image shown is the selected one, so the Layers panel shows its layer and Done returns
   // to Design with it selected. Arriving from the tab with no image selected selects the first.
   $effect(() => {
     const id = current?.id;
     if (id && !images.some((o) => editor.selection.has(o.id))) editor.select([id]);
   });
-
-  /** Images on the current image's layer: its settings are theirs too. */
-  const sharing = $derived(
-    layer ? (editor.project?.objects.filter((o) => o.layerId === layer.id).length ?? 0) : 0,
-  );
-
-  function ownSettings() {
-    if (!current) return;
-    const moved = editor.ownLayer(current.id);
-    if (moved)
-      toast.success(`${current.name} is on its own layer, “${moved.name}”, with the same settings to start.`);
-  }
 
   function pick(object: ImageObject) {
     pickedId = object.id;
@@ -276,10 +211,9 @@
           {sizeMm.w.toFixed(1)} × {sizeMm.h.toFixed(1)} mm · {grid.cols} × {grid.rows} px @ {settings.dpi} dpi
         </span>
         <div class="segmented small" role="group" aria-label="Compare">
-          {#each [['split', 'Split'], ['original', 'Original'], ['processed', 'Processed']] as const as [id, label] (id)}
+          {#each [['split', 'Split'], ['original', 'Original']] as const as [id, label] (id)}
             <button
               type="button"
-              disabled={separating && id === 'processed'}
               aria-pressed={compare === id}
               onclick={() => (compare = id)}
               data-testid="bitmap-compare-{id}">{label}</button
@@ -297,38 +231,29 @@
         </button>
       </div>
       <div class="panes" class:single={compare !== 'split'}>
-        {#if compare !== 'processed'}
-          <figure class="pane">
-            <div class="art">
-              <SeparationCanvas
-                {separation}
-                name={current.name}
-                picking={separating}
-                onshare={(v) => (share = v)}
-              />
-            </div>
-            <figcaption>
-              <span class="caption">Original</span>
-              <span class="pane-tools">
-                {#if separating}
-                  <span class="segmented mini" role="group" aria-label="Show">
-                    {#each SHOW as [id, label, hint] (id)}
-                      <button
-                        type="button"
-                        aria-pressed={separation.show === id}
-                        title={hint}
-                        onclick={() => (separation.show = id)}
-                        data-testid="separate-show-{id}">{label}</button
-                      >
-                    {/each}
-                  </span>
-                {/if}
-                <ViewColors />
+        <figure class="pane">
+          <div class="art">
+            <SeparationCanvas {separation} name={current.name} picking onshare={(v) => (share = v)} />
+          </div>
+          <figcaption>
+            <span class="caption">Original</span>
+            <span class="pane-tools">
+              <span class="segmented mini" role="group" aria-label="Show">
+                {#each SHOW as [id, label, hint] (id)}
+                  <button
+                    type="button"
+                    aria-pressed={separation.show === id}
+                    title={hint}
+                    onclick={() => (separation.show = id)}
+                    data-testid="separate-show-{id}">{label}</button
+                  >
+                {/each}
               </span>
-            </figcaption>
-          </figure>
-        {/if}
-        {#if compare !== 'original'}
+              <ViewColors />
+            </span>
+          </figcaption>
+        </figure>
+        {#if compare === 'split'}
           <figure class="pane material">
             <div class="art">
               {#if layer?.mode === 'image'}
@@ -348,124 +273,11 @@
       </div>
     </section>
 
-    <aside class="controls" aria-label="Image processing">
+    <aside class="controls" aria-label="Separate colors">
       <BedThumbnail image={current} />
-      <div class="segmented tabs" role="group" aria-label="Bitmap tools">
-        {#each [['engrave', 'Engrave'], ['separate', 'Separate']] as const as [id, label] (id)}
-          <button
-            type="button"
-            aria-pressed={tab === id}
-            onclick={() => showTab(id)}
-            data-testid="bitmap-tab-{id}">{label}</button
-          >
-        {/each}
-      </div>
-      {#if separating}
-        <h3>Separate colors</h3>
-        <SeparatePanel {separation} image={current} {share} />
-      {:else}
-        <h3>Image processing</h3>
-        {#if layer && layer.mode !== 'image'}
-          <p class="note">
-            “{layer.name}” is a {layer.mode} layer, so this image is skipped when the job runs.
-          </p>
-          <button type="button" class="btn start" onclick={useImageMode} data-testid="bitmap-image-mode">
-            Use Image mode on “{layer.name}”
-          </button>
-        {:else if layer}
-          {#if sharing > 1}
-            <div class="shared" data-testid="bitmap-shared-layer">
-              <p class="muted small">
-                These settings change all {sharing} images on “{layer.name}”.
-              </p>
-              <button type="button" class="btn small" onclick={ownSettings} data-testid="bitmap-own-layer">
-                <Split size={14} />Give this image its own settings
-              </button>
-            </div>
-          {/if}
-          <label class="field">
-            Dithering
-            <select
-              class="input"
-              value={settings.algorithm}
-              onchange={(e) =>
-                setImage({ algorithm: e.currentTarget.value as DitherAlgorithm }, false, 'algorithm')}
-              data-testid="bitmap-algorithm"
-            >
-              {#each DITHER_ALGORITHMS as a (a.id)}<option value={a.id}>{a.label}</option>{/each}
-            </select>
-          </label>
-          <NumberField
-            label="Line density"
-            hint="Scan lines per inch. Higher is finer and slower"
-            unit="dpi"
-            value={settings.dpi}
-            min={10}
-            max={1270}
-            onchange={(v, l) => setImage({ dpi: v }, l, 'dpi')}
-            testid="bitmap-dpi"
-          />
-          {#if sourceDpi !== null && sourceDpi < settings.dpi * 0.5}
-            <p class="note warn" data-testid="bitmap-low-res">
-              The photo is only {sourceDpi} dpi at this size, so it is upscaled. Shrink it or use a larger original
-              for sharper detail.
-            </p>
-          {/if}
-          {#if settings.algorithm === 'threshold'}
-            <NumberField
-              label="Threshold"
-              hint="Gray level that splits burn from no burn, 0 to 255"
-              value={settings.threshold}
-              min={0}
-              max={255}
-              onchange={(v, l) => setImage({ threshold: v }, l, 'threshold')}
-            />
-          {/if}
-          <NumberField
-            label="Brightness"
-            hint="Lightens or darkens the whole image before dithering"
-            value={settings.brightness}
-            min={-100}
-            max={100}
-            onchange={(v, l) => setImage({ brightness: v }, l, 'brightness')}
-            testid="bitmap-brightness"
-          />
-          <NumberField
-            label="Contrast"
-            hint="Spreads or squeezes the tones"
-            value={settings.contrast}
-            min={-100}
-            max={100}
-            onchange={(v, l) => setImage({ contrast: v }, l, 'contrast')}
-          />
-          <NumberField
-            label="Gamma"
-            hint="Mid-tone curve. Above 1 lightens mid-tones, below 1 darkens them"
-            decimals={2}
-            value={settings.gamma}
-            min={0.1}
-            max={5}
-            step={0.05}
-            onchange={(v, l) => setImage({ gamma: v }, l, 'gamma')}
-          />
-          <div class="toggles">
-            <Toggle
-              label="Invert"
-              hint="Burns the light areas and leaves the dark ones. For glass, slate and anodized metal"
-              checked={settings.invert}
-              onchange={(c) => setImage({ invert: c }, false, 'invert')}
-            />
-            <Toggle
-              label="Pass-through"
-              hint="Sends the image as it is, with no tone changes or dithering"
-              checked={settings.passThrough}
-              onchange={(c) => setImage({ passThrough: c }, false, 'pass')}
-            />
-          </div>
-          <button type="button" class="btn ghost" onclick={resetTone} data-testid="bitmap-reset">
-            <RotateCcw size={15} />Reset tone
-          </button>
-        {/if}
+      <h3>Separate colors</h3>
+      <SeparatePanel {separation} image={current} {share} />
+      <div class="more">
         <button
           type="button"
           class="btn ghost"
@@ -479,7 +291,7 @@
         <button type="button" class="btn ghost" onclick={() => (ui.traceImageId = current.id)}>
           <Wand size={15} />Trace to vectors
         </button>
-      {/if}
+      </div>
     </aside>
   {/if}
 </div>
@@ -616,14 +428,6 @@
     image-rendering: pixelated;
   }
 
-  .tabs {
-    display: flex;
-  }
-
-  .tabs button {
-    flex: 1;
-  }
-
   figcaption {
     display: flex;
     align-items: center;
@@ -691,33 +495,19 @@
     font-size: var(--ol-fs-md);
   }
 
-  .field {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-  }
-
-  .toggles {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-  }
-
-  .shared {
+  .more {
     display: flex;
     flex-direction: column;
     align-items: flex-start;
-    gap: 6px;
+    gap: 4px;
+    padding-top: 10px;
+    border-top: 1px solid var(--ol-border);
   }
 
   .note {
     margin: 0;
     font-size: var(--ol-fs-sm);
     color: var(--ol-text-muted);
-  }
-
-  .note.warn {
-    color: var(--ol-hold);
   }
 
   .small {
