@@ -4,7 +4,7 @@ import { importFile, newProject, prepare } from './helpers';
 
 test.beforeEach(async ({ page }) => prepare(page));
 
-test('Bitmap mode shows the original beside the processed engraving and edits its settings', async ({
+test('Bitmap mode shows the original beside the processed engraving; its settings are edited in Design', async ({
   page,
 }) => {
   await newProject(page);
@@ -23,13 +23,22 @@ test('Bitmap mode shows the original beside the processed engraving and edits it
     .poll(() => processed.evaluate((c: HTMLCanvasElement) => c.width), { timeout: 15_000 })
     .toBeGreaterThan(1);
 
-  await page.getByTestId('bitmap-algorithm').selectOption('atkinson');
-  await page.getByTestId('bitmap-compare-processed').click();
-  await expect(view.getByRole('img', { name: /Original/ })).toBeHidden();
+  // Bitmap mode is for separating: no Engrave tab, and the original stays in view for picking.
+  await expect(page.getByTestId('separate-panel')).toBeVisible();
+  await expect(page.getByTestId('bitmap-tab-engrave')).toHaveCount(0);
+  await expect(page.getByTestId('bitmap-compare-processed')).toHaveCount(0);
+  await page.getByTestId('bitmap-compare-original').click();
+  await expect(processed).toBeHidden();
+  await expect(view.getByRole('img', { name: /Original/ })).toBeVisible();
+  await page.getByTestId('bitmap-compare-split').click();
 
-  // The setting lives on the layer, so Design mode sees the same choice.
-  await page.getByTestId('view-design').click();
-  await expect(page.getByTestId('tool-select')).toBeEnabled();
+  // Dithering is a layer setting, changed in Design; Bitmap's preview follows it.
+  await page.getByTestId('layer-engrave-open-design').click();
+  await page.getByTestId('layer-algorithm').selectOption('atkinson');
+  await page.getByTestId('view-bitmap').click();
+  await expect(page.getByTestId('bitmap-processed')).toBeVisible();
+  await page.getByTestId('bitmap-done').click();
+  await expect(page.getByTestId('layer-algorithm')).toHaveValue('atkinson');
 });
 
 test('G-code export lives in the toolbar and the menu', async ({ page }) => {
@@ -72,7 +81,6 @@ test('Separate keys colors out of an image onto stacked layers', async ({ page }
   await newProject(page);
   await importFile(page, 'layered.png');
   await page.getByTestId('view-bitmap').click();
-  await page.getByTestId('bitmap-tab-separate').click();
   await expect(page.getByTestId('separate-panel')).toBeVisible();
   await expect.poll(() => pixelAt(page, 0.02, 0.02)).toEqual([0, 200, 0, 255]);
 
@@ -115,7 +123,6 @@ test('Subtract picks carve colors out of the selection and undo with the picks',
   await newProject(page);
   await importFile(page, 'layered.png');
   await page.getByTestId('view-bitmap').click();
-  await page.getByTestId('bitmap-tab-separate').click();
   await expect.poll(() => pixelAt(page, 0.02, 0.02)).toEqual([0, 200, 0, 255]);
   const share = page.getByTestId('separate-share');
   const percent = async () => Number((await share.textContent())!.match(/([\d.]+)%/)?.[1] ?? NaN);
@@ -169,7 +176,6 @@ test('Backdrop and highlight colors of the original can be changed and are remem
   await newProject(page);
   await importFile(page, 'layered.png');
   await page.getByTestId('view-bitmap').click();
-  await page.getByTestId('bitmap-tab-separate').click();
   await expect.poll(() => pixelAt(page, 0.02, 0.02)).toEqual([0, 200, 0, 255]);
   await page.getByTestId('separate-background').click();
 
@@ -222,16 +228,24 @@ test('An image opens in Bitmap mode from Design, shows each setting once, and Do
   await importFile(page, 'logo.png');
   const view = page.getByTestId('bitmap-view');
 
-  // Edit image in the image's settings.
+  // Engraving settings are in Design, in the Layers panel.
+  await expect(page.getByTestId('layer-algorithm')).toBeVisible();
+  await expect(page.getByTestId('layer-dpi')).toBeVisible();
+  await expect(page.getByTestId('layer-reset-tone')).toBeVisible();
+
+  // Edit image in the image's settings opens Bitmap mode on Separate. The engraving settings stay
+  // in Design: the Layers panel keeps the machine settings only, and points back.
   await page.getByTestId('edit-image').click();
   await expect(view).toBeVisible();
-  // Tone lives beside the preview; the Layers panel keeps the machine settings only.
-  await expect(page.getByTestId('bitmap-algorithm')).toBeVisible();
+  await expect(page.getByTestId('separate-panel')).toBeVisible();
+  await expect(page.getByTestId('bitmap-tab-engrave')).toHaveCount(0);
   await expect(page.getByTestId('layer-algorithm')).toHaveCount(0);
-  await expect(page.getByTestId('layer-tone-in-bitmap')).toBeVisible();
+  await expect(page.getByTestId('layer-dpi')).toHaveCount(0);
+  await expect(page.getByTestId('layer-reset-tone')).toHaveCount(0);
+  await expect(page.getByTestId('layer-engrave-in-design')).toBeVisible();
   await expect(page.getByTestId('layer-power')).toBeVisible();
 
-  // Done returns to Design with the image still selected, and its settings back in the panel.
+  // Done returns to Design with the image still selected.
   await page.getByTestId('bitmap-done').click();
   await expect(view).toBeHidden();
   await expect(page.getByTestId('layer-algorithm')).toBeVisible();
@@ -263,7 +277,7 @@ test('Opening Bitmap from the tab selects the image it shows', async ({ page }) 
   await page.keyboard.press('Escape');
   await expect(page.getByTestId('edit-image')).toHaveCount(0);
   await page.getByTestId('view-bitmap').click();
-  await expect(page.getByTestId('layer-tone-in-bitmap')).toBeVisible();
+  await expect(page.getByTestId('separate-panel')).toBeVisible();
   await page.getByTestId('bitmap-done').click();
   await expect(page.getByTestId('edit-image')).toBeVisible();
 });
@@ -286,11 +300,10 @@ test('Bitmap shows where the image sits on the bed, and follows it when it moves
   await expect(marker).not.toHaveAttribute('points', before!);
 });
 
-test('An image on a shared layer can get its own settings from Bitmap mode', async ({ page }) => {
+test('An image on a shared layer can get its own settings in Design', async ({ page }) => {
   await newProject(page);
   await importFile(page, 'layered.png');
   await page.getByTestId('view-bitmap').click();
-  await page.getByTestId('bitmap-tab-separate').click();
   await expect.poll(() => pixelAt(page, 0.02, 0.02)).toEqual([0, 200, 0, 255]);
   // Two red subjects, each its own object, onto one new layer.
   await clickImage(page, 0.2, 0.6);
@@ -301,14 +314,27 @@ test('An image on a shared layer can get its own settings from Bitmap mode', asy
   await expect(layers).toHaveCount(2);
 
   await layers.nth(1).getByTestId('object-row').first().click();
-  await page.getByTestId('bitmap-tab-engrave').click();
-  await expect(page.getByTestId('bitmap-shared-layer')).toContainText('all 2 images');
-  await page.getByTestId('bitmap-own-layer').click();
+  await page.getByTestId('bitmap-done').click();
+  await expect(page.getByTestId('image-shared-layer')).toContainText('all 2 images');
+  await page.getByTestId('image-own-layer').click();
   await expect(layers).toHaveCount(3);
   await expect(layers.nth(1).getByTestId('object-row')).toHaveCount(1);
   await expect(layers.nth(2).getByTestId('object-row')).toHaveCount(1);
-  await expect(page.getByTestId('bitmap-shared-layer')).toHaveCount(0);
+  await expect(page.getByTestId('image-shared-layer')).toHaveCount(0);
 
   await page.keyboard.press('ControlOrMeta+z');
   await expect(layers).toHaveCount(2);
+});
+
+test('Reset tone in Design puts the layer tone back to its defaults', async ({ page }) => {
+  await newProject(page);
+  await importFile(page, 'logo.png');
+  const brightness = page.getByTestId('layer-brightness');
+  await brightness.fill('40');
+  await brightness.press('Enter');
+  await expect(brightness).toHaveValue('40');
+  await page.getByTestId('layer-reset-tone').click();
+  await expect(brightness).toHaveValue('0');
+  await page.keyboard.press('ControlOrMeta+z');
+  await expect(brightness).toHaveValue('40');
 });

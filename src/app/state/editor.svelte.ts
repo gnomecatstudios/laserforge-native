@@ -174,7 +174,7 @@ export class Editor {
     this.view = 'design';
   }
 
-  /** Opens Bitmap mode on one image: its engraving preview, tone and color separation. */
+  /** Opens Bitmap mode on one image: its color separation, beside its engraving preview. */
   editImage(id: Id): void {
     this.select([id]);
     this.view = 'bitmap';

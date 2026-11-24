@@ -1,6 +1,6 @@
 <script lang="ts">
   /**
-   * Separate tab of Bitmap mode: key colors out of an image (a backdrop, a sky, one object among
+   * Bitmap mode's Separate panel: key colors out of an image (a backdrop, a sky, one object among
    * several) and move them to a layer of their own, erase them, or keep only them. Repeating it
    * peels a picture into foreground, midground and background layers that stack back together.
    */
