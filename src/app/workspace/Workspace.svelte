@@ -14,6 +14,7 @@
   import BitmapView from './BitmapView.svelte';
   import LayersPanel from './LayersPanel.svelte';
   import LayoutPanel from './LayoutPanel.svelte';
+  import PricingPanel from './PricingPanel.svelte';
   import SelectionInspector from '../inspector/SelectionInspector.svelte';
   import { textOutlines } from '../state/text.svelte';
   import ConsolePanel from '../machine/ConsolePanel.svelte';
@@ -115,6 +116,9 @@
               onclick={() => actions.closeDocument()}><X size={16} /></button
             >
           </section>
+        {/if}
+        {#if editor.view === 'preview' && (editor.project || editor.gcode)}
+          <ErrorBoundary name="Pricing"><PricingPanel /></ErrorBoundary>
         {/if}
       </div>
       {#if live?.controls}
