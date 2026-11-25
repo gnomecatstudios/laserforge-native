@@ -11,8 +11,6 @@
   import FileCode from '@lucide/svelte/icons/file-code';
   import { openPhoneCapture } from '../phone/phone-capture.svelte';
   import Logo from '$lib/ui/Logo.svelte';
-  import GithubMark from '$lib/ui/GithubMark.svelte';
-  import { REPO_URL } from '$lib/config/app';
   import { formatCombo } from '../lib/keys';
   import { DRAWING_KEYS, UPDATE_KEYS } from '../shortcuts';
   import { editor } from '../state/editor.svelte';
@@ -59,11 +57,14 @@
     run: () => void;
     projectOnly?: boolean;
     documentOnly?: boolean;
+    testid?: string;
   };
   const menu: Array<MenuItem | 'separator'> = $derived([
     { label: 'New project', keys: 'Mod+N', run: () => actions.newProject() },
     { label: 'Open project or G-code…', keys: 'Mod+O', run: () => actions.openFile() },
     { label: 'Save as…', keys: 'Mod+Shift+S', run: () => actions.saveProjectAs(), projectOnly: true },
+    { label: 'Close project', run: () => actions.closeDocument(), documentOnly: true },
+    'separator',
     { label: 'Import image or SVG…', keys: 'Mod+I', run: () => void actions.importArt() },
     {
       label: 'Import a drawing (ink only mode)…',
@@ -71,9 +72,6 @@
       run: () => void actions.importDrawing(),
     },
     { label: 'Scan art with phone…', run: () => void openPhoneCapture() },
-    { label: 'Send G-code file…', run: () => actions.openGcodeFile() },
-    { label: `${exportLabel}…`, keys: 'Mod+E', run: () => void actions.exportJob(), documentOnly: true },
-    { label: 'Print template…', keys: 'Mod+P', run: () => actions.printDesign(), projectOnly: true },
     {
       label: 'Trace image…',
       keys: 'Shift+T',
@@ -81,6 +79,15 @@
       projectOnly: true,
     },
     { label: 'Convert selected text to paths', run: convertSelectedText, projectOnly: true },
+    'separator',
+    {
+      label: `${exportLabel}…`,
+      keys: 'Mod+E',
+      run: () => void actions.exportJob(),
+      documentOnly: true,
+      testid: 'menu-export',
+    },
+    { label: 'Print template…', keys: 'Mod+P', run: () => actions.printDesign(), projectOnly: true },
     'separator',
     { label: 'Machine profiles', run: () => (ui.profilesOpen = true) },
     { label: 'Device settings ($$)', run: () => (ui.deviceSettingsOpen = true) },
@@ -90,7 +97,6 @@
     { label: 'Take the tour', run: () => (ui.tourOpen = true) },
     { label: 'Check for updates', keys: UPDATE_KEYS, run: () => void checkForUpdates() },
     { label: 'About', run: () => route.go('about') },
-    { label: 'Close project', run: () => actions.closeDocument() },
   ]);
 </script>
 
@@ -102,7 +108,7 @@
     aria-label="Back to start"
     title="Back to start"
   >
-    <Logo size={28} />
+    <Logo size={28} wordmark={false} />
   </button>
   <DropdownMenu.Root>
     <DropdownMenu.Trigger class="menu-trigger" aria-label="Menu" data-testid="app-menu">
@@ -120,7 +126,7 @@
                 (item.documentOnly && !editor.project && !editor.gcode)}
               onSelect={item.run}
             >
-              <span data-testid={item.documentOnly ? 'menu-export' : undefined}>{item.label}</span>
+              <span data-testid={item.testid}>{item.label}</span>
               {#if item.keys}<span class="ol-menu-keys mono">{formatCombo(item.keys)}</span>{/if}
             </DropdownMenu.Item>
           {/if}
@@ -244,16 +250,6 @@
   <button type="button" class="icon-btn" aria-label="Help" title="Help" onclick={() => route.go('help')}>
     <CircleHelp size={18} />
   </button>
-  <a
-    class="icon-btn"
-    href={REPO_URL}
-    target="_blank"
-    rel="noopener"
-    aria-label="Laser Forge on GitHub"
-    title="GitHub"
-  >
-    <GithubMark />
-  </a>
 </header>
 
 <style>

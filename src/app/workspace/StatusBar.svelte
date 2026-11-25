@@ -26,7 +26,9 @@
     {/if}
     <span class:go={machine.state.homed}>{machine.state.homed ? 'Homed' : 'Not homed'}</span>
   {/if}
-  <span class:go={pwa.offlineReady}>{pwa.offlineReady ? 'Offline ready' : 'Online'}</span>
+  {#if pwa.offlineReady}<span class="go" title="Laser Forge works without an internet connection"
+      >Offline ready</span
+    >{/if}
 </div>
 
 <style>

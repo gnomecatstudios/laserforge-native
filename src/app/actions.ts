@@ -393,15 +393,6 @@ async function importImage(file: File, target: () => { id: Id; created: Layer | 
   return object.id;
 }
 
-export async function openGcodeFile(): Promise<void> {
-  try {
-    const [opened] = await openFiles([GCODE_FILES], { id: 'gcode' });
-    if (opened) await openGcodeText(opened.name, await opened.file.text());
-  } catch (error) {
-    toast.error(`Could not open the G-code file: ${errorMessage(error)}`);
-  }
-}
-
 export async function openGcodeText(name: string, text: string): Promise<void> {
   const parsed = await parseGcodeInWorker(text, profiles.active.maxS);
   if (editor.project) await session.flush();

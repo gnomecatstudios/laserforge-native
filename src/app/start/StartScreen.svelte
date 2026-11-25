@@ -20,6 +20,7 @@
   import { route } from '../state/route.svelte';
   import { session } from '../state/session.svelte';
   import { ui } from '../state/ui.svelte';
+  import { pwa } from '../pwa.svelte';
   import ConnectHelpButton from '../connect/ConnectHelpButton.svelte';
   import * as actions from '../actions';
 
@@ -102,9 +103,6 @@
         <div class="panel recents">
           <div class="panel-head">
             <h2>Recent projects</h2>
-            <button type="button" class="link" onclick={() => actions.openFile()}
-              ><FolderOpen size={14} />Open file…</button
-            >
           </div>
           {#if session.recents.length === 0}
             <p class="empty">Projects you open or create show up here.</p>
@@ -145,10 +143,8 @@
   <footer class="foot">
     <span>LaserForge · Free and open source</span>
     <span class="foot-links">
-      <button type="button" class="link" onclick={() => route.go('help')}>Help</button>
-      <button type="button" class="link" onclick={() => route.go('about')}>About</button>
       <button type="button" class="link" onclick={() => (ui.tourOpen = true)}>Tour</button>
-      <span class="mono">Offline ready</span>
+      {#if pwa.offlineReady}<span class="mono">Offline ready</span>{/if}
     </span>
   </footer>
 </div>

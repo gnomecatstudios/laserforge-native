@@ -23,6 +23,9 @@
   const bounds = $derived(boundsOf(movable));
   const bed = $derived(currentBed());
   let target = $state('selection');
+  /** One object has nothing to line up with but the bed, so a single selection aligns to it. */
+  const single = $derived(selected.length < 2);
+  const alignTarget = $derived(single ? 'bed' : target);
   let array = $state('none');
   let rows = $state(2),
     columns = $state(2),
@@ -68,9 +71,9 @@
   function align(value: Alignment) {
     if (!bounds) return;
     const reference =
-      target === 'bed'
+      alignTarget === 'bed'
         ? { minX: 0, minY: 0, maxX: bed.width, maxY: bed.height }
-        : target === 'last' && last
+        : alignTarget === 'last' && last
           ? boundsOf([last])
           : bounds;
     if (!reference) return;
@@ -86,7 +89,9 @@
               : value;
     const transforms = rigidLayout(editor.project!, movable, editor.groupScope, (units) =>
       alignObjects(
-        target === 'last' ? units.filter((o) => o.id !== (last ? editor.scopeUnit(last.id) : null)) : units,
+        alignTarget === 'last'
+          ? units.filter((o) => o.id !== (last ? editor.scopeUnit(last.id) : null))
+          : units,
         reference,
         actual,
       ),
@@ -131,9 +136,16 @@
     <h3>Layout</h3>
     <label class="target"
       >Align to
-      <select class="input" bind:value={target} aria-label="Align to">
-        <option value="selection">Selection bounds</option>
-        <option value="last">Last-selected object</option>
+      <select
+        class="input"
+        value={alignTarget}
+        onchange={(e) => (target = e.currentTarget.value)}
+        aria-label="Align to"
+        disabled={single}
+        title={single ? 'Select two or more objects to align them to each other' : undefined}
+      >
+        <option value="selection" disabled={single}>Selection bounds</option>
+        <option value="last" disabled={single}>Last-selected object</option>
         <option value="bed">Bed</option>
       </select>
     </label>
@@ -142,38 +154,24 @@
         <button
           type="button"
           class="btn ghost"
-          disabled={!movable.length || (target !== 'bed' && selected.length < 2)}
+          disabled={!movable.length}
           onclick={() => align(item.id as Alignment)}
           aria-label="Align {item.label}">{item.label}</button
         >
       {/each}
     </div>
-    <div class="buttons" role="group" aria-label="Distribution">
-      <button
-        type="button"
-        class="btn ghost"
-        disabled={movable.length < 3}
-        onclick={() => distribute('x', 'centers')}>Space centres X</button
-      >
-      <button
-        type="button"
-        class="btn ghost"
-        disabled={movable.length < 3}
-        onclick={() => distribute('y', 'centers')}>Space centres Y</button
-      >
-      <button
-        type="button"
-        class="btn ghost"
-        disabled={movable.length < 3}
-        onclick={() => distribute('x', 'gaps')}>Equal gaps X</button
-      >
-      <button
-        type="button"
-        class="btn ghost"
-        disabled={movable.length < 3}
-        onclick={() => distribute('y', 'gaps')}>Equal gaps Y</button
-      >
-    </div>
+    {#if movable.length >= 3}
+      <div class="buttons" role="group" aria-label="Distribution">
+        <button type="button" class="btn ghost" onclick={() => distribute('x', 'centers')}
+          >Space centres X</button
+        >
+        <button type="button" class="btn ghost" onclick={() => distribute('y', 'centers')}
+          >Space centres Y</button
+        >
+        <button type="button" class="btn ghost" onclick={() => distribute('x', 'gaps')}>Equal gaps X</button>
+        <button type="button" class="btn ghost" onclick={() => distribute('y', 'gaps')}>Equal gaps Y</button>
+      </div>
+    {/if}
     <label class="target"
       >Repeat
       <select
