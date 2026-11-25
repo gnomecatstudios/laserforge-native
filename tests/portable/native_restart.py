@@ -21,7 +21,6 @@ ROOT = Path(__file__).resolve().parents[2]
 ADDRESS = 'http://127.0.0.1:5190'
 PLATFORM = 'windows-x64' if os.name == 'nt' else 'linux-x64'
 BINARY = 'LaserForge-Portable.exe' if os.name == 'nt' else 'LaserForge-Portable'
-BASE = 'https://github.com/gnomecatstudios/laserforge-native/releases'
 
 TRANSPORT = r'''package main
 import ("bytes"; "fmt"; "io"; "net/http"; "os"; "path/filepath"; "strings")
@@ -29,7 +28,10 @@ type fixtureTransport struct{}
 func (fixtureTransport) RoundTrip(r *http.Request) (*http.Response,error) {
  name:="package.zip"
  switch {
- case strings.HasSuffix(r.URL.Path,"/releases/latest"): name="release.json"
+ case strings.HasSuffix(r.URL.Path,"/releases/latest"):
+  // GitHub's release page redirects to the newest stable tag; the REST API is not used.
+  header:=make(http.Header); header.Set("Location","https://github.com/gnomecatstudios/laserforge-native/releases/tag/v1.2.3")
+  return &http.Response{StatusCode:302,Header:header,Body:io.NopCloser(bytes.NewReader(nil)),Request:r},nil
  case strings.HasSuffix(r.URL.Path,"SHA256SUMS.txt"): name="SHA256SUMS.txt"
  }
  data,err:=os.ReadFile(filepath.Join(os.Getenv("LASERFORGE_TEST_FIXTURES"),name)); if err!=nil{return nil,err}
@@ -133,10 +135,6 @@ def main():
         name = f'LaserForge-Portable-{PLATFORM}-v1.2.3.zip'
         sums = f'{hashlib.sha256(valid_bytes).hexdigest()}  {name}\n'
         (fixture / 'SHA256SUMS.txt').write_text(sums)
-        def asset(name, size):
-            return {'name': name, 'size': size, 'state': 'uploaded', 'browser_download_url': BASE + '/download/v1.2.3/' + name}
-        (fixture / 'release.json').write_text(json.dumps({'tag_name': 'v1.2.3', 'html_url': BASE + '/tag/v1.2.3',
-            'draft': False, 'prerelease': False, 'assets': [asset(name, len(valid_bytes)), asset('SHA256SUMS.txt', len(sums))]}))
         environment = {**os.environ, 'LASERFORGE_TEST_FIXTURES': str(fixture)}
         if os.name == 'nt':
             environment['PATH'] = os.environ['SystemRoot'] + r'\System32'

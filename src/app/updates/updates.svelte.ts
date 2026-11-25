@@ -1,7 +1,7 @@
 import { APP_VERSION } from '$lib/config/app';
 import { toast } from '$lib/ui/toasts.svelte';
 import { connectedSession } from '../machines/registry';
-import { fetchRelease, isNewer, isPlatform, type Platform, type Release } from './releases';
+import { fetchRelease, isNewer, isPlatform, nativeRelease, type Platform, type Release } from './releases';
 
 class Updates {
   open = $state(false);
@@ -37,7 +37,7 @@ export async function checkForUpdates(manual = true): Promise<void> {
   updates.checking = true;
   updates.error = false;
   try {
-    updates.release = await fetchRelease();
+    updates.release = updates.native ? await fetchNativeRelease() : await fetchRelease();
     // Automatic checks never pop up over a connected laser; a manual check may, once it is idle.
     if (updates.available && (manual || !connectedSession())) updates.open = true;
   } catch {
@@ -93,6 +93,26 @@ async function refreshNativeUpdate(): Promise<void> {
   updates.nativeStatus = data.status;
   updates.nativeError = 'error' in data && typeof data.error === 'string' ? data.error : '';
   updates.nativeVersion = 'version' in data && typeof data.version === 'string' ? data.version : '';
+}
+
+/**
+ * The launcher reads the latest release from GitHub's release page. GitHub's API allows
+ * only 60 anonymous requests an hour per IP address, which shared networks run out of.
+ */
+async function fetchNativeRelease(): Promise<Release> {
+  await refreshNativeUpdate(); // a fresh token if the launcher restarted
+  if (!isPlatform(updates.platform)) throw new Error('Unknown platform');
+  const response = await fetch('/api/portable-update?action=check', {
+    method: 'POST',
+    headers: { 'X-LaserForge-Update': nativeToken },
+    cache: 'no-store',
+    signal: AbortSignal.timeout(20_000),
+  });
+  if (!response.ok) throw new Error(`Update check failed (${response.status})`);
+  const data: unknown = await response.json();
+  if (!data || typeof data !== 'object' || !('version' in data) || typeof data.version !== 'string')
+    throw new Error('Invalid updater response');
+  return nativeRelease(data.version, updates.platform);
 }
 
 /** Reload once the updated launcher serves: each launcher issues a fresh update token. */

@@ -1,5 +1,6 @@
+import email.message
 import hashlib
-from contextlib import nullcontext
+from contextlib import contextmanager, nullcontext
 import importlib.util
 import io
 import json
@@ -8,7 +9,7 @@ import socket
 import struct
 import tempfile
 import unittest
-from urllib.error import URLError
+from urllib.error import HTTPError, URLError
 from unittest.mock import patch
 import zipfile
 
@@ -59,20 +60,57 @@ class UpdateTests(unittest.TestCase):
         (root / 'LaserForge-Portable').write_bytes(b'old binary')
         (root / 'project.olaser').write_bytes(b'my project')
 
+    @contextmanager
     def network(self, payload, checksum=None):
+        """GitHub's public release pages; the rate-limited REST API is never used."""
         name = 'LaserForge-Portable-linux-x64-v0.3.0.zip'
-        def asset(name, size):
-            return {'name': name, 'size': size, 'state': 'uploaded',
-                    'browser_download_url': f'{updater.BASE}/download/v0.3.0/{name}'}
-        release = {'tag_name': 'v0.3.0', 'draft': False, 'prerelease': False,
-                   'html_url': f'{updater.BASE}/tag/v0.3.0',
-                   'assets': [asset(name, len(payload)), asset('SHA256SUMS.txt', 100)]}
         sums = f'{checksum or hashlib.sha256(payload).hexdigest()}  {name}\n'.encode()
         def fetch(url, limit):
-            if url == updater.API:
-                return json.dumps(release).encode()
+            self.assertIn(url, (f'{updater.BASE}/download/v0.3.0/SHA256SUMS.txt',
+                                f'{updater.BASE}/download/v0.3.0/{name}'))
             return sums if url.endswith('SHA256SUMS.txt') else payload
-        return fetch
+        with patch.object(updater, 'latest_tag', return_value='v0.3.0'), \
+                patch.object(updater, 'fetch', side_effect=fetch):
+            yield
+
+    def test_latest_release_comes_from_the_release_page_redirect(self):
+        def opener(status, location=None):
+            class Opener:
+                def open(self, request, timeout):
+                    assert request.full_url == f'{updater.BASE}/latest'
+                    if status == 200:
+                        return nullcontext()
+                    headers = email.message.Message()
+                    if location:
+                        headers['Location'] = location
+                    raise HTTPError(request.full_url, status, 'Found', headers, io.BytesIO())
+            return Opener()
+        valid = [f'{updater.BASE}/tag/v0.3.0', '/gnomecatstudios/laserforge-native/releases/tag/v0.3.0']
+        for location in valid:
+            with self.subTest(location=location), \
+                    patch.object(updater.urllib.request, 'build_opener', return_value=opener(302, location)):
+                self.assertEqual(updater.latest_tag(), 'v0.3.0')
+        invalid = [updater.BASE, f'{updater.BASE}/tag/v0.3.0-beta', f'{updater.BASE}/tag/0.3.0',
+                   f'{updater.BASE}/tag/v0.3.0/evil', 'https://github.com/someone/else/releases/tag/v9.9.9',
+                   'https://evil.example/gnomecatstudios/laserforge-native/releases/tag/v9.9.9', None]
+        for location in invalid:
+            with self.subTest(location=location), \
+                    patch.object(updater.urllib.request, 'build_opener', return_value=opener(302, location)):
+                with self.assertRaises(ValueError):
+                    updater.latest_tag()
+        with patch.object(updater.urllib.request, 'build_opener', return_value=opener(200)):
+            with self.assertRaises(ValueError):
+                updater.latest_tag()
+        with patch.object(updater.urllib.request, 'build_opener', return_value=opener(403)):
+            with self.assertRaises(HTTPError):
+                updater.latest_tag()
+
+    def test_check_names_the_platform_package_from_the_tag(self):
+        with patch.object(updater, 'latest_tag', return_value='v0.3.0'):
+            self.assertIsNone(updater.latest('0.3.0', 'raspberry-pi-arm64'))
+            release = updater.latest('0.2.1', 'raspberry-pi-arm64')
+        self.assertEqual(release['version'], '0.3.0')
+        self.assertEqual(release['names'][0], 'LaserForge-Portable-RPi-ARM64-v0.3.0.zip')
 
     def test_download_apply_and_preserve_projects(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -80,7 +118,7 @@ class UpdateTests(unittest.TestCase):
             self.installed(root)
             with patch.object(updater, 'host_platform', return_value='linux-x64'), \
                     patch.object(updater, 'ensure_stopped'), \
-                    patch.object(updater, 'fetch', side_effect=self.network(self.package())):
+                    self.network(self.package()):
                 self.assertEqual(updater.download(root), '0.3.0')
                 self.assertEqual((root / 'LaserForge-Portable').read_bytes(), b'old binary')
                 self.assertTrue(updater.apply_pending(root))
@@ -96,7 +134,7 @@ class UpdateTests(unittest.TestCase):
             root = Path(directory)
             self.installed(root)
             with patch.object(updater, 'host_platform', return_value='linux-x64'), \
-                    patch.object(updater, 'fetch', side_effect=self.network(self.package(), '0' * 64)):
+                    self.network(self.package(), '0' * 64):
                 with self.assertRaisesRegex(ValueError, 'mismatch'):
                     updater.download(root)
             self.assertFalse((root / '.pending-update.zip').exists())
@@ -127,7 +165,7 @@ class UpdateTests(unittest.TestCase):
                 return original(source, destination)
             with patch.object(updater, 'host_platform', return_value='linux-x64'), \
                     patch.object(updater, 'ensure_stopped'), \
-                    patch.object(updater, 'fetch', side_effect=self.network(payload)), \
+                    self.network(payload), \
                     patch.object(Path, 'replace', fail_release):
                 with self.assertRaisesRegex(OSError, 'simulated'):
                     updater.apply_pending(root)
@@ -184,7 +222,7 @@ class UpdateTests(unittest.TestCase):
             (root / '.pending-update.zip').write_bytes(tampered)
             with patch.object(updater, 'host_platform', return_value='linux-x64'), \
                     patch.object(updater, 'ensure_stopped'), \
-                    patch.object(updater, 'fetch', side_effect=self.network(payload)):
+                    self.network(payload):
                 with self.assertRaisesRegex(ValueError, 'differs'):
                     updater.apply_pending(root)
             self.assertEqual((root / 'LaserForge-Portable').read_bytes(), b'old binary')

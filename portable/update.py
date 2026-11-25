@@ -21,11 +21,14 @@ import subprocess
 import sys
 import tempfile
 import threading
+import urllib.error
+import urllib.parse
 import urllib.request
 import zipfile
 
 REPO = 'gnomecatstudios/laserforge-native'  # native app releases only
-API = f'https://api.github.com/repos/{REPO}/releases/latest'
+# The public release pages, not api.github.com: its anonymous limit of 60 requests
+# an hour per IP address runs out on shared networks and blocked every update.
 BASE = f'https://github.com/{REPO}/releases'
 MAX_DOWNLOAD = 128 * 1024 * 1024
 PLATFORMS = {'windows-x64', 'linux-x64', 'raspberry-pi-arm64', 'raspberry-pi-arm32'}
@@ -63,7 +66,7 @@ def metadata(root):
 
 def fetch(url, limit):
     request = urllib.request.Request(url, headers={
-        'Accept': 'application/vnd.github+json' if url == API else 'application/octet-stream',
+        'Accept': 'application/octet-stream',
         'User-Agent': 'LaserForge-Updater',
     })
     with urllib.request.urlopen(request, timeout=15) as response:
@@ -75,35 +78,54 @@ def fetch(url, limit):
     return data
 
 
+class _KeepRedirect(urllib.request.HTTPRedirectHandler):
+    def redirect_request(self, *args, **kwargs):
+        return None
+
+
+def latest_tag():
+    """The newest stable release tag, read from the /releases/latest redirect.
+
+    Like the REST API, GitHub's release page skips drafts and prereleases.
+    """
+    request = urllib.request.Request(f'{BASE}/latest', headers={'User-Agent': 'LaserForge-Updater'})
+    try:
+        with urllib.request.build_opener(_KeepRedirect).open(request, timeout=15):
+            raise ValueError('Release page did not redirect to a release')
+    except urllib.error.HTTPError as error:
+        if error.code not in (301, 302, 303, 307, 308):
+            raise
+        location = urllib.parse.urljoin(f'{BASE}/latest', error.headers.get('Location') or '')
+        error.close()
+    tag = location.removeprefix(f'{BASE}/tag/')
+    if tag == location or not tag.startswith('v'):
+        raise ValueError('Invalid release redirect')
+    version(tag[1:])
+    return tag
+
+
 def latest(current, platform_id):
-    data = json.loads(fetch(API, 1024 * 1024))
-    tag = data.get('tag_name', '')
-    if not tag.startswith('v'):
-        raise ValueError('Invalid release tag')
+    tag = latest_tag()
     candidate = tag[1:]
-    version(candidate)
-    if data.get('draft') is not False or data.get('prerelease') is not False:
-        raise ValueError('Only published stable releases are supported')
-    if data.get('html_url') != f'{BASE}/tag/{tag}':
-        raise ValueError('Invalid release URL')
     if version(candidate) <= version(current):
         return None
-    assets = data.get('assets', [])
-    def asset(name):
-        url = f'{BASE}/download/{tag}/{name}'
-        matches = [a for a in assets if a.get('name') == name and
-                   a.get('browser_download_url') == url and a.get('state') == 'uploaded' and
-                   isinstance(a.get('size'), int) and 0 < a['size'] <= MAX_DOWNLOAD]
-        if len(matches) != 1:
-            raise ValueError(f'Missing or invalid release asset: {name}')
-        return matches[0]
     short = {'raspberry-pi-arm64': 'RPi-ARM64', 'raspberry-pi-arm32': 'RPi-ARM32'}.get(platform_id, platform_id)
-    names = [f'LaserForge-Portable-{suffix}-v{candidate}.zip' for suffix in (short, platform_id)]
+    names = [f'LaserForge-Portable-{suffix}-{tag}.zip' for suffix in (short, platform_id)]
     names += [f'LaserForge-Portable-{suffix}.zip' for suffix in (short, platform_id)]
-    name = next((n for n in names if any(a.get('name') == n for a in assets)), names[0])
-    return {'version': candidate, 'platform': platform_id,
-            'package': asset(name),
-            'checksums': asset('SHA256SUMS.txt')}
+    return {'version': candidate, 'platform': platform_id, 'tag': tag, 'names': list(dict.fromkeys(names))}
+
+
+def package_checksum(release):
+    """This platform's package name and SHA-256 from the release's SHA256SUMS.txt."""
+    sums = fetch(f"{BASE}/download/{release['tag']}/SHA256SUMS.txt", 64 * 1024).decode('utf-8')
+    entries = [line.split() for line in sums.splitlines()]
+    for name in release['names']:
+        hashes = [parts[0] for parts in entries if len(parts) == 2 and parts[1] == name]
+        if len(hashes) == 1 and re.fullmatch('[a-fA-F0-9]{64}', hashes[0]):
+            return name, hashes[0].lower()
+        if hashes:
+            break
+    raise ValueError('Missing or invalid package checksum')
 
 
 def validate_binary(path, platform_id):
@@ -149,7 +171,7 @@ def unpack(archive, destination, platform_id, expected_version):
     app = destination / 'LaserForge-Portable'
     binary = app / ('LaserForge-Portable.exe' if platform_id == 'windows-x64' else 'LaserForge-Portable')
     validate_binary(binary, platform_id)
-    # Older official releases lack this file; the validated release API supplies it.
+    # Older official releases lack this file; the validated release tag supplies it.
     release_path = app / 'release.json'
     expected = {'platform': platform_id, 'version': expected_version}
     if release_path.exists() and json.loads(release_path.read_text()) != expected:
@@ -191,15 +213,10 @@ def download(root):
     if release is None:
         return None
     with lock(root):
-        checksums = fetch(release['checksums']['browser_download_url'], 64 * 1024).decode('utf-8')
-        name = release['package']['name']
-        hashes = [line.split()[0] for line in checksums.splitlines()
-                  if len(line.split()) == 2 and line.split()[1] == name]
-        if len(hashes) != 1 or not re.fullmatch('[a-fA-F0-9]{64}', hashes[0]):
-            raise ValueError('Missing or invalid package checksum')
-        payload = fetch(release['package']['browser_download_url'], MAX_DOWNLOAD)
-        if len(payload) != release['package']['size'] or hashlib.sha256(payload).hexdigest() != hashes[0].lower():
-            raise ValueError('Update checksum/size mismatch')
+        name, expected = package_checksum(release)
+        payload = fetch(f"{BASE}/download/{release['tag']}/{name}", MAX_DOWNLOAD)
+        if hashlib.sha256(payload).hexdigest() != expected:
+            raise ValueError('Update checksum mismatch')
         with tempfile.TemporaryDirectory(prefix='.update-', dir=root) as temporary:
             work = Path(temporary)
             archive = work / 'release.zip'
@@ -235,11 +252,10 @@ def _apply_pending(root):
     release = latest(current['version'], current['platform'])
     if release is None:
         return False
-    checksums = fetch(release['checksums']['browser_download_url'], 64 * 1024).decode('utf-8')
-    if pending.stat().st_size > MAX_DOWNLOAD or pending.stat().st_size != release['package']['size']:
+    if pending.stat().st_size > MAX_DOWNLOAD:
         raise ValueError('Cached update has an invalid size')
-    expected = f"{hashlib.sha256(pending.read_bytes()).hexdigest()}  {release['package']['name']}"
-    if expected not in checksums.splitlines():
+    _, expected = package_checksum(release)
+    if hashlib.sha256(pending.read_bytes()).hexdigest() != expected:
         raise ValueError('Cached update differs from the latest release; download again')
     with tempfile.TemporaryDirectory(prefix='.apply-', dir=root) as temporary:
         work = Path(temporary)
