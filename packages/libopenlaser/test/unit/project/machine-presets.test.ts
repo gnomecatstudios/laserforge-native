@@ -75,6 +75,20 @@ describe('machine presets', () => {
     });
   });
 
+  it('lists the K40+ as a 45 W GRBL CO₂ machine homed top left', () => {
+    const [k40plus] = searchPresets('k40 plus');
+    expect(presetProfileFields(k40plus!)).toMatchObject({
+      name: 'K40 Plus 45W (OMTech K40+)',
+      bedWidth: 300,
+      bedHeight: 200,
+      originCorner: 'tl',
+      laserType: 'co2',
+      controller: 'grbl',
+      laserWatts: 45,
+      supportsAirAssist: true,
+    });
+  });
+
   it('sets LaserPeckers up for their own protocol at 460800 baud, homed top left', () => {
     const lp2 = MACHINE_PRESETS.find((p) => p.brand === 'LaserPecker' && p.model === 'LP2')!;
     expect(presetProfileFields(lp2)).toMatchObject({

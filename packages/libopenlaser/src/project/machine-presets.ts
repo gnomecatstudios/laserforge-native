@@ -8,7 +8,8 @@
  *
  * CO₂ machines on Ruida controllers (home at the top right) run exported .rd files; sizes from the
  * makers' spec pages (Thunder Laser, Aeon, OMTech), checked 2026-10. A K40 with a GRBL board
- * connects like any GRBL laser.
+ * connects like any GRBL laser. The OMTech K40+ (300 × 200 mm, 45 W, from OMTech's manual and
+ * listing, 2026-11) ships a Cortex-M3 board rather than a Ruida, so it is listed as GRBL too.
  *
  * LaserPecker LP2 and LP3 speak their own protocol over Bluetooth or USB (460800 baud) and work from
  * the top-left corner. LP2: 100 × 100 mm, slide 100 × 300, rotary up to 628 mm around. LP3:
@@ -140,6 +141,14 @@ export const MACHINE_PRESETS: readonly MachinePreset[] = [
   {
     brand: 'K40',
     model: 'CO₂ with GRBL board',
+    bedWidth: 300,
+    bedHeight: 200,
+    originCorner: 'tl',
+    laserType: 'co2',
+  },
+  {
+    brand: 'K40',
+    model: 'Plus 45W (OMTech K40+)',
     bedWidth: 300,
     bedHeight: 200,
     originCorner: 'tl',
