@@ -12,8 +12,8 @@ In a terminal, run `uname -m`:
 
 | Result | Package |
 | --- | --- |
-| `aarch64` | [ARM64 ZIP](https://github.com/gnomecatstudios/laserforge-native/releases/download/v3.0.6/LaserForge-Portable-RPi-ARM64-v3.0.6.zip) |
-| `armv7l` or `armv6l` | [ARM32 ZIP](https://github.com/gnomecatstudios/laserforge-native/releases/download/v3.0.6/LaserForge-Portable-RPi-ARM32-v3.0.6.zip) |
+| `aarch64` | [ARM64 ZIP](https://github.com/gnomecatstudios/laserforge-native/releases/download/v3.0.7/LaserForge-Portable-RPi-ARM64-v3.0.7.zip) |
+| `armv7l` or `armv6l` | [ARM32 ZIP](https://github.com/gnomecatstudios/laserforge-native/releases/download/v3.0.7/LaserForge-Portable-RPi-ARM32-v3.0.7.zip) |
 
 Choose based on your installed operating system, even if the Pi's processor
 supports 64-bit. The ARM32 server targets ARMv6 or newer; browser availability

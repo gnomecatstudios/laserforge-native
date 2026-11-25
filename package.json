@@ -1,7 +1,7 @@
 {
   "name": "laser-forge",
   "private": true,
-  "version": "3.0.6",
+  "version": "3.0.7",
   "description": "Laser engraver and cutter control in your browser. Free, open source, works offline.",
   "license": "MIT",
   "type": "module",
