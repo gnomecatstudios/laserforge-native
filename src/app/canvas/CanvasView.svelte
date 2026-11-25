@@ -5,7 +5,7 @@
   import Minus from '@lucide/svelte/icons/minus';
   import Plus from '@lucide/svelte/icons/plus';
   import Maximize from '@lucide/svelte/icons/maximize';
-  import { IDENTITY, multiply, rotationAbout, translation } from 'libopenlaser/geometry';
+  import { IDENTITY, apply, multiply, rotationAbout, translation } from 'libopenlaser/geometry';
   import type { Mat2D, Rect, Vec2 } from 'libopenlaser/geometry';
   import { setObjectTransforms, transformObjects } from 'libopenlaser/project';
   import { makeId } from 'libopenlaser/project';
@@ -49,6 +49,8 @@
   import { ui } from '../state/ui.svelte';
   import TextEditOverlay from './TextEditOverlay.svelte';
   import NodeEditor from './NodeEditor.svelte';
+  import { pathNodes } from './node-edit';
+  import { editableVectors, nodeSelection } from '../state/nodes.svelte';
   import PenOverlay from './PenOverlay.svelte';
   import { pen } from '../state/pen.svelte';
   import CanvasContextMenu from './CanvasContextMenu.svelte';
@@ -86,7 +88,14 @@
         originals: Map<Id, Mat2D>;
       }
     | { kind: 'rotate'; center: Vec2; startAngle: number; originals: Map<Id, Mat2D> }
-    | { kind: 'marquee'; start: Vec2; current: Vec2; additive: boolean }
+    | {
+        kind: 'marquee';
+        start: Vec2;
+        current: Vec2;
+        additive: boolean;
+        /** Node tool: the box picks path nodes; a plain click with `clearOnClick` deselects. */
+        nodes?: { clearOnClick: boolean };
+      }
     | { kind: 'shape'; shape: DrawnShape; start: Vec2; current: Vec2 }
     | { kind: 'measure' };
 
@@ -330,9 +339,20 @@
     }
     if (editor.tool === 'node') {
       const hit = hitAt(screen);
-      if (hit?.kind === 'vector' && !hit.locked)
+      const editing = hit?.kind === 'vector' && !hit.locked && editor.selection.has(hit.id);
+      if (hit?.kind === 'vector' && !hit.locked && !editing) {
         editor.select([hit.id], event.shiftKey ? 'toggle' : 'replace');
-      else editor.clearSelection();
+        nodeSelection.clear();
+        return;
+      }
+      // Empty space or the shape being edited: drag a box to pick its nodes.
+      drag = {
+        kind: 'marquee',
+        start: screen,
+        current: screen,
+        additive: event.shiftKey,
+        nodes: { clearOnClick: !editing },
+      };
       return;
     }
     if (editor.tool === 'measure') {
@@ -493,6 +513,28 @@
     if (el.hasPointerCapture(event.pointerId)) el.releasePointerCapture(event.pointerId);
     if (!d) return;
     if (d.kind === 'move' || d.kind === 'scale' || d.kind === 'rotate') editor.sealHistory();
+    if (d.kind === 'marquee' && d.nodes) {
+      const box = normalizeRect(d.start, d.current);
+      if (box.maxX - box.minX < 3 && box.maxY - box.minY < 3) {
+        // A click: off the shapes deselects as before; on the edited shape it drops the picks.
+        if (d.additive) return;
+        if (d.nodes.clearOnClick) editor.clearSelection();
+        nodeSelection.clear();
+        return;
+      }
+      const inside = (p: Vec2) => p.x >= box.minX && p.x <= box.maxX && p.y >= box.minY && p.y <= box.maxY;
+      nodeSelection.pickMany(
+        editableVectors(editor.project).flatMap((object) =>
+          pathNodes(object.paths)
+            .filter(
+              (n) => !n.control && inside(bedToScreen(canvas.view, bed, apply(object.transform, n.point))),
+            )
+            .map((n) => ({ objectId: object.id, node: { path: n.path, index: n.index } })),
+        ),
+        d.additive,
+      );
+      return;
+    }
     if (d.kind === 'marquee') {
       const box = normalizeRect(d.start, d.current);
       if (box.maxX - box.minX < 3 && box.maxY - box.minY < 3) return;

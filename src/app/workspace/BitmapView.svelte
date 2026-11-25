@@ -275,6 +275,15 @@
 
     <aside class="controls" aria-label="Separate colors">
       <BedThumbnail image={current} />
+      <button
+        type="button"
+        class="btn start trace"
+        onclick={() => (ui.traceImageId = current.id)}
+        title="Turn this image into vector paths you can cut, score or edit node by node"
+        data-testid="bitmap-trace"
+      >
+        <Wand size={15} />Trace to vectors
+      </button>
       <h3>Separate colors</h3>
       <SeparatePanel {separation} image={current} {share} />
       <div class="more">
@@ -287,9 +296,6 @@
           data-testid="bitmap-keep-ink"
         >
           <PenLine size={15} />{cleaning ? 'Cleaning up…' : 'Ink only mode'}
-        </button>
-        <button type="button" class="btn ghost" onclick={() => (ui.traceImageId = current.id)}>
-          <Wand size={15} />Trace to vectors
         </button>
       </div>
     </aside>

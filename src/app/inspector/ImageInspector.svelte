@@ -1,19 +1,14 @@
 <script lang="ts">
   import SectionToggle from '../workspace/SectionToggle.svelte';
   import { sections } from '../state/sections.svelte';
-  import Wand from '@lucide/svelte/icons/wand-sparkles';
-  import PenLine from '@lucide/svelte/icons/pen-line';
   import SlidersHorizontal from '@lucide/svelte/icons/sliders-horizontal';
   import Split from '@lucide/svelte/icons/split';
   import { toast } from '$lib/ui/toasts.svelte';
   import { editor } from '../state/editor.svelte';
-  import { keepOnlyInk } from '../actions';
   import type { ImageObject } from 'libopenlaser/project';
-  import { ui } from '../state/ui.svelte';
 
   let { object }: { object: ImageObject } = $props();
   const asset = $derived(object.name);
-  let cleaning = $state(false);
 
   // Engraving settings (dithering, line density, tone) belong to the layer and are edited in the
   // Layers panel above. What depends on this one image is shown here.
@@ -35,15 +30,6 @@
     return widthPx && widthMm > 0 ? Math.round(widthPx / (widthMm / 25.4)) : null;
   });
   const lineDensity = $derived(layer?.image?.dpi ?? null);
-
-  async function cleanUp(): Promise<void> {
-    cleaning = true;
-    try {
-      await keepOnlyInk(object.id);
-    } finally {
-      cleaning = false;
-    }
-  }
 
   function ownSettings() {
     const moved = editor.ownLayer(object.id);
@@ -78,23 +64,10 @@
       type="button"
       class="btn"
       onclick={() => editor.editImage(object.id)}
-      title="Open in Bitmap mode to remove the background or split the photo into layers by color. Or double-click the image, or press Enter"
+      title="Trace to vectors, remove the background, keep only ink, or split the photo into layers by color. Or double-click the image, or press Enter"
       data-testid="edit-image"
     >
       <SlidersHorizontal size={15} />Edit image
-    </button>
-    <button type="button" class="btn" onclick={() => (ui.traceImageId = object.id)} data-testid="trace-open">
-      <Wand size={15} />Trace to vectors
-    </button>
-    <button
-      type="button"
-      class="btn"
-      disabled={cleaning}
-      onclick={cleanUp}
-      title="For a photo of a pen or marker drawing: removes shadows, uneven light and the paper, leaving black ink on a transparent background"
-      data-testid="keep-ink"
-    >
-      <PenLine size={15} />{cleaning ? 'Cleaning up…' : 'Ink only mode'}
     </button>
   {/if}
 </section>

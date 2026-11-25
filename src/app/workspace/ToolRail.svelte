@@ -16,11 +16,6 @@
     ) ?? [],
   );
 
-  const selectedImage = $derived(
-    editor.project?.objects.find(
-      (o) => editor.selection.has(o.id) && o.kind === 'image' && o.visible && !o.locked,
-    ),
-  );
   const simplified = $derived(
     vectors.map((o) => ({ ...o, paths: o.paths.map((p) => simplifyPath(p, tolerance, o.transform)) })),
   );
@@ -187,19 +182,6 @@
     title={booleanSelectionIssue() ?? 'Union closed shapes (Ctrl+Shift+U)'}
     onclick={uniteSelection}><Combine size={18} /></button
   >
-  {#if selectedImage && !vectors.length}
-    <button
-      type="button"
-      class="icon-btn tool"
-      aria-label="Simplify image paths"
-      data-testid="tool-simplify"
-      disabled={!designing}
-      onclick={() => {
-        ui.traceForSimplify = true;
-        ui.traceImageId = selectedImage.id;
-      }}><Spline size={18} /></button
-    >
-  {:else}
     <Popover.Root bind:open={ui.simplifyOpen}>
       <Popover.Trigger
         class="icon-btn tool"
@@ -258,7 +240,6 @@
         </Popover.Content>
       </Popover.Portal>
     </Popover.Root>
-  {/if}
   <div class="rule"></div>
   <button
     type="button"

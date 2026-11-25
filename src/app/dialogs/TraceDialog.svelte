@@ -52,13 +52,6 @@
     pixels = null;
     result = null;
     if (!target) return;
-    if (ui.traceForSimplify) {
-      keepImage = true;
-      options = { ...tracePreset('lineart').options, smoothness: 70 };
-      preset = null;
-      autoThreshold = true;
-      view = 'outline';
-    }
     const asset = editor.project?.assets[target.assetId];
     if (!asset) return;
     void decodeImage(asset.data)
@@ -125,7 +118,6 @@
     if (timer) clearTimeout(timer);
     stopTrace();
     ui.traceImageId = null;
-    ui.traceForSimplify = false;
   }
 
   function apply() {
@@ -142,6 +134,8 @@
       ids = placed.objectIds;
       return placed.project;
     });
+    // The trace is vector paths now: show them on the bed, selected, even when traced from Bitmap.
+    editor.view = 'design';
     editor.select(ids);
     close();
     toast.success(`Traced ${traced.length} ${traced.length === 1 ? 'shape' : 'colors'}`);
@@ -162,7 +156,7 @@
 
 <Dialog
   bind:open
-  title={ui.traceForSimplify ? 'Simplify image paths' : 'Trace image'}
+  title="Trace image"
   width={900}
   onclose={close}
   testid="trace-dialog"
@@ -196,13 +190,6 @@
     </div>
 
     <div class="controls">
-      {#if ui.traceForSimplify}
-        <p data-testid="image-simplify-help">
-          Trace the image into editable vector paths. Increase Smoothness to reduce small bumps and nodes;
-          adjust Corners to retain detail. Preview the outlines before applying. The original image is kept
-          underneath unless you switch that off.
-        </p>
-      {/if}
       <div class="presets" role="radiogroup" aria-label="Presets">
         {#each TRACE_PRESETS as p (p.id)}
           <button

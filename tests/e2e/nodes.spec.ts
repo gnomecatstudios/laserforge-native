@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test, type Page } from '@playwright/test';
 import { newProject, prepare, dragOnCanvas } from './helpers';
 test.beforeEach(async ({ page }) => prepare(page));
 test('draws a closed path, moves a node, undoes and unites shapes', async ({ page }) => {
@@ -112,4 +112,60 @@ test('Delete in the node tool never removes the whole object', async ({ page }) 
   await expect(page.getByTestId('path-node').nth(1)).toHaveAttribute('aria-pressed', 'false');
   await page.keyboard.press('Delete');
   await expect(page.getByTestId('path-node')).toHaveCount(3);
+});
+
+/** A closed seven-node path; finishing it leaves the node tool open on it. */
+async function sevenNodes(page: Page) {
+  await newProject(page);
+  await page.getByTestId('tool-pen').click();
+  const box = (await page.getByTestId('bed-canvas').boundingBox())!;
+  for (const [x, y] of [
+    [0.3, 0.3],
+    [0.4, 0.3],
+    [0.5, 0.3],
+    [0.5, 0.4],
+    [0.5, 0.5],
+    [0.4, 0.5],
+    [0.3, 0.5],
+    [0.3, 0.3],
+  ])
+    await page.mouse.click(box.x + box.width * x, box.y + box.height * y);
+  await expect(page.getByTestId('path-node')).toHaveCount(7);
+  return box;
+}
+
+const picked = (page: Page) => page.locator('[data-testid="path-node"][aria-pressed="true"]');
+
+test('dragging a box picks several nodes and Delete removes them in one undo step', async ({ page }) => {
+  const box = await sevenNodes(page);
+  const at = (x: number, y: number) => [box.x + box.width * x, box.y + box.height * y] as const;
+  // A box around the top row of three nodes, started on empty bed.
+  await page.mouse.move(...at(0.25, 0.25));
+  await page.mouse.down();
+  await page.mouse.move(...at(0.4, 0.3), { steps: 4 });
+  await page.mouse.move(...at(0.55, 0.35), { steps: 4 });
+  await page.mouse.up();
+  await expect(picked(page)).toHaveCount(3);
+  // The path stays selected while its nodes are picked.
+  await expect(page.getByTestId('status-bar')).toContainText('1 selected');
+  await page.keyboard.press('Delete');
+  await expect(page.getByTestId('path-node')).toHaveCount(4);
+  await expect(page.getByTestId('status-bar')).toContainText('1 object');
+  await page.keyboard.press('ControlOrMeta+z');
+  await expect(page.getByTestId('path-node')).toHaveCount(7);
+});
+
+test('Shift+click adds and removes picked nodes; a click on empty bed deselects', async ({ page }) => {
+  const box = await sevenNodes(page);
+  const nodes = page.getByTestId('path-node');
+  await nodes.nth(1).click();
+  await nodes.nth(3).click({ modifiers: ['Shift'] });
+  await nodes.nth(5).click({ modifiers: ['Shift'] });
+  await expect(picked(page)).toHaveCount(3);
+  await nodes.nth(5).click({ modifiers: ['Shift'] });
+  await expect(picked(page)).toHaveCount(2);
+  await page.keyboard.press('Delete');
+  await expect(nodes).toHaveCount(5);
+  await page.mouse.click(box.x + box.width * 0.8, box.y + box.height * 0.8);
+  await expect(page.getByTestId('status-bar')).not.toContainText('selected');
 });

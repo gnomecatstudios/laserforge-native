@@ -8,7 +8,8 @@ test('traces an image into vector layers and burns them', async ({ page }) => {
   await newProject(page);
   await importFile(page, 'logo.png');
   await expect(page.getByTestId('image-inspector')).toBeVisible();
-  await page.getByTestId('trace-open').click();
+  await page.getByTestId('edit-image').click();
+  await page.getByTestId('bitmap-trace').click();
 
   const dialog = page.getByTestId('trace-dialog');
   await expect(dialog).toContainText(/nodes/, { timeout: 15_000 });
@@ -49,7 +50,8 @@ test('a photo trace lands on a few layers that stay when their objects go', asyn
   await newProject(page);
   await importFile(page, 'portrait.png');
   await expect(page.getByTestId('image-inspector')).toBeVisible();
-  await page.getByTestId('trace-open').click();
+  await page.getByTestId('edit-image').click();
+  await page.getByTestId('bitmap-trace').click();
   await page.getByTestId('trace-preset-photo').click();
   await expect(page.getByTestId('trace-dialog')).toContainText(/\d+ colors/, { timeout: 20_000 });
   await page.getByTestId('trace-apply').click();

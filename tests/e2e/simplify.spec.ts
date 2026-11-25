@@ -35,28 +35,6 @@ test('previews closed-path simplification, cancels, applies and undoes', async (
   expect(errors).toEqual([]);
 });
 
-test('simplifies image outlines through tracing and keeps the original for undo', async ({ page }) => {
-  const { importFile } = await import('./helpers');
-  await prepare(page);
-  await newProject(page);
-  await importFile(page, 'logo.png');
-  await expect(page.getByTestId('image-inspector')).toBeVisible();
-  await page.getByTestId('tool-simplify').click();
-  const dialog = page.getByTestId('trace-dialog');
-  await expect(dialog).toContainText('Simplify image paths');
-  await expect(page.getByTestId('image-simplify-help')).toBeVisible();
-  await expect(dialog.getByRole('switch', { name: 'Keep the image underneath' })).toHaveAttribute(
-    'aria-checked',
-    'true',
-  );
-  await expect(page.getByTestId('trace-apply')).toBeEnabled({ timeout: 20000 });
-  await page.screenshot({ path: '/tmp/laserforge-image-simplify.png' });
-  await page.getByTestId('trace-apply').click();
-  await expect(dialog).toBeHidden();
-  await expect(page.getByTestId('status-bar')).toContainText('2 objects');
-  await page.keyboard.press('ControlOrMeta+z');
-  await expect(page.getByTestId('status-bar')).toContainText('1 object');
-});
 
 test('Escape closes the Simplify Path popover', async ({ page }) => {
   await prepare(page);

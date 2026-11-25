@@ -72,12 +72,6 @@
       run: () => void actions.importDrawing(),
     },
     { label: 'Scan art with phone…', run: () => void openPhoneCapture() },
-    {
-      label: 'Trace image…',
-      keys: 'Shift+T',
-      run: () => actions.traceSelectedImage(),
-      projectOnly: true,
-    },
     { label: 'Convert selected text to paths', run: convertSelectedText, projectOnly: true },
     'separator',
     {

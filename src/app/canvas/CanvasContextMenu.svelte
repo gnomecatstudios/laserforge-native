@@ -54,25 +54,16 @@
       ),
   );
   const issue = $derived(open ? booleanSelectionIssue() : null);
-  /** Simplify works on unlocked vectors; a lone image goes through Trace to simplify its outlines. */
+  /** Simplify works on unlocked vectors; images are traced from Edit image. */
   const simplifiable = $derived(
     selected.filter((o) => o.kind === 'vector' && o.visible && !o.locked).length > 0,
-  );
-  const traceable = $derived(
-    !simplifiable ? selected.find((o) => o.kind === 'image' && o.visible && !o.locked) : undefined,
   );
   /** Opens a toolbar panel once the menu has handed focus back, so the panel takes focus (and Escape). */
   function later(run: () => void) {
     requestAnimationFrame(() => requestAnimationFrame(run));
   }
   function simplify() {
-    const image = traceable;
-    later(() => {
-      if (image) {
-        ui.traceForSimplify = true;
-        ui.traceImageId = image.id;
-      } else ui.simplifyOpen = true;
-    });
+    later(() => (ui.simplifyOpen = true));
   }
   const base = $derived(
     editor.project?.objects.find((o) => o.id === [...editor.selection][0])?.name ?? 'first selected object',
@@ -189,7 +180,7 @@
       </ContextMenu.Item>
       <ContextMenu.Item
         class="ol-menu-item"
-        disabled={!simplifiable && !traceable}
+        disabled={!simplifiable}
         onSelect={simplify}
         data-testid="menu-simplify"
       >

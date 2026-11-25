@@ -6,25 +6,14 @@
   import { canvas } from '../state/canvas.svelte';
   import { bedToScreen, screenToBed, type BedFrame } from './viewport';
   import { insertNode, moveNode, pathNodes, type NodeRef } from './node-edit';
-  import { nodeSelection } from '../state/nodes.svelte';
+  import { editableVectors, nodeSelection } from '../state/nodes.svelte';
   let { bed }: { bed: BedFrame } = $props();
   let host: HTMLDivElement;
-  const objects = $derived(
-    editor.tool === 'node' && editor.view === 'design'
-      ? (editor.project?.objects.filter(
-          (o): o is VectorObject =>
-            o.kind === 'vector' &&
-            !o.locked &&
-            o.visible &&
-            editor.selection.has(o.id) &&
-            editor.project!.layers.some((l) => l.id === o.layerId && l.visible),
-        ) ?? [])
-      : [],
-  );
+  const objects = $derived(editableVectors(editor.project));
   let drag: { object: VectorObject; node: NodeRef; pointer: number } | null = null;
-  // Forget the picked node when leaving the node tool, so Delete never hits a node picked earlier.
+  // Forget picked nodes when leaving the node tool, so Delete never hits nodes picked earlier.
   $effect(() => {
-    if (editor.tool !== 'node' || editor.view !== 'design') nodeSelection.current = null;
+    if (editor.tool !== 'node' || editor.view !== 'design') nodeSelection.clear();
   });
   function screen(object: VectorObject, point: Vec2) {
     return bedToScreen(canvas.view, bed, apply(object.transform, point));
@@ -151,7 +140,15 @@
             nodeSelection.remove(object, node);
             return;
           }
-          nodeSelection.current = node.control ? null : { objectId: object.id, node };
+          if (!node.control) {
+            if (event.shiftKey) {
+              // Shift+click adds or removes one node from the picks; it never starts a drag.
+              nodeSelection.pick(object.id, node, 'toggle');
+              return;
+            }
+            // Dragging one of several picked nodes keeps the others picked.
+            if (!nodeSelection.is(object.id, node)) nodeSelection.pick(object.id, node);
+          }
           event.currentTarget.setPointerCapture(event.pointerId);
           editor.sealHistory();
           drag = { object, node, pointer: event.pointerId };
@@ -165,8 +162,8 @@
   {/each}
   {#if editor.tool === 'node' && editor.view === 'design'}
     <p>
-      Click a path to add a node; drag nodes or curve handles to edit. Select a node and press Delete (or
-      Alt+click it) to remove it.
+      Click a path to add a node; drag nodes or curve handles to edit. Drag a box or Shift+click to pick
+      several nodes, then press Delete (or Alt+click a node) to remove them.
     </p>
   {/if}
 </div>
