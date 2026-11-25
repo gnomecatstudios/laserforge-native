@@ -36,30 +36,30 @@ This is the native app-window edition of Laser Forge. Its [releases and download
 
 | Platform | Download |
 | --- | --- |
-| Windows x64 | [Portable ZIP](https://github.com/gnomecatstudios/laserforge-native/releases/download/v3.0.5/LaserForge-Portable-windows-x64-v3.0.5.zip) |
-| Linux x64 | [Portable ZIP](https://github.com/gnomecatstudios/laserforge-native/releases/download/v3.0.5/LaserForge-Portable-linux-x64-v3.0.5.zip) |
-| Raspberry Pi OS 64-bit (ARM64) | [Portable ZIP](https://github.com/gnomecatstudios/laserforge-native/releases/download/v3.0.5/LaserForge-Portable-RPi-ARM64-v3.0.5.zip) |
-| Raspberry Pi OS 32-bit (ARMv6+) | [Portable ZIP](https://github.com/gnomecatstudios/laserforge-native/releases/download/v3.0.5/LaserForge-Portable-RPi-ARM32-v3.0.5.zip) |
+| Windows x64 | [Portable ZIP](https://github.com/gnomecatstudios/laserforge-native/releases/download/v3.0.6/LaserForge-Portable-windows-x64-v3.0.6.zip) |
+| Linux x64 | [Portable ZIP](https://github.com/gnomecatstudios/laserforge-native/releases/download/v3.0.6/LaserForge-Portable-linux-x64-v3.0.6.zip) |
+| Raspberry Pi OS 64-bit (ARM64) | [Portable ZIP](https://github.com/gnomecatstudios/laserforge-native/releases/download/v3.0.6/LaserForge-Portable-RPi-ARM64-v3.0.6.zip) |
+| Raspberry Pi OS 32-bit (ARMv6+) | [Portable ZIP](https://github.com/gnomecatstudios/laserforge-native/releases/download/v3.0.6/LaserForge-Portable-RPi-ARM32-v3.0.6.zip) |
 
-See the [portable setup guide](./portable/README.md) for launch instructions, shortcuts, architecture selection, and troubleshooting. Verify downloads with the [SHA-256 checksums](https://github.com/gnomecatstudios/laserforge-native/releases/download/v3.0.5/SHA256SUMS.txt).
+See the [portable setup guide](./portable/README.md) for launch instructions, shortcuts, architecture selection, and troubleshooting. Verify downloads with the [SHA-256 checksums](https://github.com/gnomecatstudios/laserforge-native/releases/download/v3.0.6/SHA256SUMS.txt).
 
 The launcher serves the app locally at `http://127.0.0.1:5190/` and stops when you close the app window. Chrome, Edge or Chromium must be installed; the app window uses its engine with a separate Laser Forge profile, so autosaves from earlier browser-tab versions do not carry over (open your saved `.olaser` files instead). Run `LaserForge-Portable --browser-tab` to use a normal browser tab, `--browser <path>` to pick the browser, or `--no-browser` to serve only. For offline text engraving, import the bundled `Fonts/Geist-500.ttf` or your own font through the font picker. Other Google Fonts need an initial download.
 
 
 ### Windows x64
 
-[Download the Windows portable ZIP](https://github.com/gnomecatstudios/laserforge-native/releases/download/v3.0.5/LaserForge-Portable-windows-x64-v3.0.5.zip). Extract the entire ZIP, then double-click `LaserForge-Portable.exe` in the extracted folder. Laser Forge opens in its own window using Chrome or Edge; no console window stays open. Run `Start-LaserForge.cmd --shortcut` for a desktop shortcut.
+[Download the Windows portable ZIP](https://github.com/gnomecatstudios/laserforge-native/releases/download/v3.0.6/LaserForge-Portable-windows-x64-v3.0.6.zip). Extract the entire ZIP, then double-click `LaserForge-Portable.exe` in the extracted folder. Laser Forge opens in its own window using Chrome or Edge; no console window stays open. Run `Start-LaserForge.cmd --shortcut` for a desktop shortcut.
 
 ### Linux x64
 
-[download the Linux portable ZIP](https://github.com/gnomecatstudios/laserforge-native/releases/download/v3.0.5/LaserForge-Portable-linux-x64-v3.0.5.zip), extract it, and run `chmod +x LaserForge-Portable` followed by `./LaserForge-Portable` in the extracted folder. For menu and desktop shortcuts, run `python3 setup.py` or `python3 setup.py --cli`; Python setup is optional.
+[download the Linux portable ZIP](https://github.com/gnomecatstudios/laserforge-native/releases/download/v3.0.6/LaserForge-Portable-linux-x64-v3.0.6.zip), extract it, and run `chmod +x LaserForge-Portable` followed by `./LaserForge-Portable` in the extracted folder. For menu and desktop shortcuts, run `python3 setup.py` or `python3 setup.py --cli`; Python setup is optional.
 
 ### Raspberry Pi OS
 
 Run `uname -m` in Terminal to choose the matching package:
 
-- `aarch64`: [portable ZIP](https://github.com/gnomecatstudios/laserforge-native/releases/download/v3.0.5/LaserForge-Portable-RPi-ARM64-v3.0.5.zip).
-- `armv6l`, `armv7l`, or `armv8l`: [portable ZIP](https://github.com/gnomecatstudios/laserforge-native/releases/download/v3.0.5/LaserForge-Portable-RPi-ARM32-v3.0.5.zip).
+- `aarch64`: [portable ZIP](https://github.com/gnomecatstudios/laserforge-native/releases/download/v3.0.6/LaserForge-Portable-RPi-ARM64-v3.0.6.zip).
+- `armv6l`, `armv7l`, or `armv8l`: [portable ZIP](https://github.com/gnomecatstudios/laserforge-native/releases/download/v3.0.6/LaserForge-Portable-RPi-ARM32-v3.0.6.zip).
 
 For a portable ZIP, extract it and use the same launcher commands as Linux. A desktop environment and Chromium (included in desktop Raspberry Pi OS) must already be installed. See the [Raspberry Pi guide](./portable/raspberry-pi.md) for architecture and USB access troubleshooting.
 

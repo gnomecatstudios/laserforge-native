@@ -11,12 +11,12 @@ This repository hosts packaged apps and update releases. The development reposit
 
 | Platform | Portable ZIP | Installation |
 | --- | --- | --- |
-| Windows x64 | [Download](https://github.com/gnomecatstudios/laserforge-native/releases/download/v3.0.5/LaserForge-Portable-windows-x64-v3.0.5.zip) | Extract and run |
-| Linux x64 | [Download](https://github.com/gnomecatstudios/laserforge-native/releases/download/v3.0.5/LaserForge-Portable-linux-x64-v3.0.5.zip) | Extract and run |
-| RPi ARM64 | [Download](https://github.com/gnomecatstudios/laserforge-native/releases/download/v3.0.5/LaserForge-Portable-RPi-ARM64-v3.0.5.zip) | Extract and run |
-| RPi ARM32 | [Download](https://github.com/gnomecatstudios/laserforge-native/releases/download/v3.0.5/LaserForge-Portable-RPi-ARM32-v3.0.5.zip) | Extract and run |
+| Windows x64 | [Download](https://github.com/gnomecatstudios/laserforge-native/releases/download/v3.0.6/LaserForge-Portable-windows-x64-v3.0.6.zip) | Extract and run |
+| Linux x64 | [Download](https://github.com/gnomecatstudios/laserforge-native/releases/download/v3.0.6/LaserForge-Portable-linux-x64-v3.0.6.zip) | Extract and run |
+| RPi ARM64 | [Download](https://github.com/gnomecatstudios/laserforge-native/releases/download/v3.0.6/LaserForge-Portable-RPi-ARM64-v3.0.6.zip) | Extract and run |
+| RPi ARM32 | [Download](https://github.com/gnomecatstudios/laserforge-native/releases/download/v3.0.6/LaserForge-Portable-RPi-ARM32-v3.0.6.zip) | Extract and run |
 
-[SHA-256 checksums](https://github.com/gnomecatstudios/laserforge-native/releases/download/v3.0.5/SHA256SUMS.txt)
+[SHA-256 checksums](https://github.com/gnomecatstudios/laserforge-native/releases/download/v3.0.6/SHA256SUMS.txt)
 
 ## Installation
 
