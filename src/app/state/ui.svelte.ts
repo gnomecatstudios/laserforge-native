@@ -28,8 +28,6 @@ class Ui {
   printOpen = $state(false);
   /** Simplify path popover, opened from the toolbar or the canvas menu. */
   simplifyOpen = $state(false);
-  /** Image being traced, when the Trace dialog is open. */
-  traceImageId = $state<string | null>(null);
   /** Layer under the pointer in the Layers panel; its objects glow on the bed. */
   hoverLayerId = $state<string | null>(null);
   /** Object under the pointer in the Layers panel. */

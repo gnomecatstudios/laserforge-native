@@ -453,7 +453,7 @@ export async function startWithVirtualMachine(): Promise<void> {
   if (live && transport) await live.session.connect(transport.kind);
 }
 
-/** Opens the Trace dialog for the selected image (or the only image when nothing is selected). */
+/** Opens the selected image (or the only image) in Bitmap mode, where it is traced. */
 export function traceSelectedImage(): void {
   const project = editor.project;
   if (!project) return;
@@ -464,5 +464,5 @@ export function traceSelectedImage(): void {
     toast.info(images.length ? 'Select the image to trace.' : 'Import an image to trace it.');
     return;
   }
-  ui.traceImageId = target.id;
+  editor.editImage(target.id);
 }

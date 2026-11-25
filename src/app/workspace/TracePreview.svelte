@@ -108,9 +108,10 @@
 <style>
   .preview {
     flex: 1;
+    align-self: stretch;
+    min-width: 0;
     min-height: 0;
-    border-radius: var(--ol-radius-md);
-    border: 1px solid var(--ol-border);
+    border-radius: var(--ol-radius-sm);
     background: var(--ol-bed);
     overflow: hidden;
   }

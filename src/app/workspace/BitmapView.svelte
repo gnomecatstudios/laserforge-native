@@ -6,24 +6,45 @@
    * Layers panel.
    */
   import ImagePlus from '@lucide/svelte/icons/image-plus';
-  import Wand from '@lucide/svelte/icons/wand-sparkles';
   import PenLine from '@lucide/svelte/icons/pen-line';
   import Check from '@lucide/svelte/icons/check';
+  import Shapes from '@lucide/svelte/icons/shapes';
+  import Spline from '@lucide/svelte/icons/spline';
+  import ImageIcon from '@lucide/svelte/icons/image';
+  import LoaderCircle from '@lucide/svelte/icons/loader-circle';
   import { DEFAULT_IMAGE_SETTINGS } from 'libopenlaser/cam';
   import type { ImageObject, ImageSettings, Layer } from 'libopenlaser/project';
   import { reportError } from '$lib/ui/errors';
   import { editor } from '../state/editor.svelte';
-  import { ui } from '../state/ui.svelte';
   import * as actions from '../actions';
   import { ditherInWorker } from '../lib/cam-client';
   import { Separation, separationFocus, type SeparationShow } from './separation.svelte';
   import SeparationCanvas from './SeparationCanvas.svelte';
-  import SeparatePanel from './SeparatePanel.svelte';
   import ViewColors from './ViewColors.svelte';
-  import BedThumbnail from './BedThumbnail.svelte';
+  import TracePanel from './TracePanel.svelte';
+  import TracePreview from './TracePreview.svelte';
+  import { tracing } from './trace.svelte';
 
-  /** Colors are picked on the original, so it always shows; the engraving can show beside it. */
-  type Compare = 'split' | 'original';
+  /**
+   * Colors are picked on the original, so it always shows. Beside it: the engraving (Split) or the
+   * live trace (Trace).
+   */
+  type Compare = 'split' | 'trace' | 'original';
+  const COMPARE: Array<[Compare, string]> = [
+    ['split', 'Split'],
+    ['trace', 'Trace'],
+    ['original', 'Original'],
+  ];
+  const TRACE_VIEWS = [
+    { id: 'result', label: 'Result', icon: Shapes },
+    { id: 'outline', label: 'Outlines over the image', icon: Spline },
+    { id: 'original', label: 'Original image', icon: ImageIcon },
+  ] as const;
+  const traceSummary = $derived(
+    tracing.result
+      ? `${tracing.result.layers.length} ${tracing.result.layers.length === 1 ? 'color' : 'colors'} · ${tracing.result.nodes.toLocaleString('en-US')} nodes`
+      : '',
+  );
 
   const SHOW: Array<[SeparationShow, string, string]> = [
     ['highlight', 'Highlight', 'Tint the selection over the whole image'],
@@ -60,16 +81,8 @@
     rows: Math.max(1, Math.round((sizeMm.h * settings.dpi) / 25.4)),
   });
   let compare = $state<Compare>('split');
-  let cleaning = $state(false);
-
-  async function keepInk(id: string): Promise<void> {
-    cleaning = true;
-    try {
-      await actions.keepOnlyInk(id);
-    } finally {
-      cleaning = false;
-    }
-  }
+  // Leaving Bitmap mode stops a trace still running for the preview.
+  $effect(() => () => tracing.cancel());
   // The original is drawn from a small decoded copy, which also previews color selections.
   const separation = new Separation();
   let share = $state(0);
@@ -211,7 +224,7 @@
           {sizeMm.w.toFixed(1)} × {sizeMm.h.toFixed(1)} mm · {grid.cols} × {grid.rows} px @ {settings.dpi} dpi
         </span>
         <div class="segmented small" role="group" aria-label="Compare">
-          {#each [['split', 'Split'], ['original', 'Original']] as const as [id, label] (id)}
+          {#each COMPARE as [id, label] (id)}
             <button
               type="button"
               aria-pressed={compare === id}
@@ -230,7 +243,7 @@
           <Check size={14} />Done
         </button>
       </div>
-      <div class="panes" class:single={compare !== 'split'}>
+      <div class="panes" class:single={compare === 'original'}>
         <figure class="pane">
           <div class="art">
             <SeparationCanvas {separation} name={current.name} picking onshare={(v) => (share = v)} />
@@ -269,36 +282,47 @@
             </div>
             <figcaption><span class="caption">Processed · as engraved</span></figcaption>
           </figure>
+        {:else if compare === 'trace'}
+          <figure class="pane">
+            <div class="art">
+              <TracePreview pixels={tracing.pixels} result={tracing.result} view={tracing.view} />
+            </div>
+            <figcaption>
+              <span class="caption status mono" data-testid="trace-status">
+                {#if !tracing.pixels}
+                  <LoaderCircle size={13} class="spin" />Reading image…
+                {:else if tracing.progress !== null}
+                  <LoaderCircle size={13} class="spin" />Tracing {Math.round(tracing.progress * 100)}%
+                {:else if tracing.result}
+                  {traceSummary}
+                {/if}
+              </span>
+              <span class="pane-tools">
+                <span class="segmented mini" role="group" aria-label="Trace preview">
+                  {#each TRACE_VIEWS as v (v.id)}
+                    <button
+                      type="button"
+                      aria-pressed={tracing.view === v.id}
+                      aria-label={v.label}
+                      title={v.label}
+                      onclick={() => (tracing.view = v.id)}><v.icon size={14} /></button
+                    >
+                  {/each}
+                </span>
+              </span>
+            </figcaption>
+          </figure>
         {/if}
       </div>
     </section>
 
-    <aside class="controls" aria-label="Separate colors">
-      <BedThumbnail image={current} />
-      <button
-        type="button"
-        class="btn start trace"
-        onclick={() => (ui.traceImageId = current.id)}
-        title="Turn this image into vector paths you can cut, score or edit node by node"
-        data-testid="bitmap-trace"
-      >
-        <Wand size={15} />Trace to vectors
-      </button>
-      <h3>Separate colors</h3>
-      <SeparatePanel {separation} image={current} {share} />
-      <div class="more">
-        <button
-          type="button"
-          class="btn ghost"
-          disabled={cleaning}
-          onclick={() => keepInk(current.id)}
-          title="For a photo of a pen or marker drawing: removes shadows, uneven light and the paper, leaving black ink on a transparent background"
-          data-testid="bitmap-keep-ink"
-        >
-          <PenLine size={15} />{cleaning ? 'Cleaning up…' : 'Ink only mode'}
-        </button>
-      </div>
-    </aside>
+    <TracePanel
+      {separation}
+      image={current}
+      {share}
+      live={compare === 'trace'}
+      onsettings={() => (compare = 'trace')}
+    />
   {/if}
 </div>
 
@@ -484,30 +508,10 @@
     color: #555;
   }
 
-  .controls {
-    width: 260px;
-    flex-shrink: 0;
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-    padding: 14px;
-    overflow-y: auto;
-    border-left: 1px solid var(--ol-border);
-    background: var(--ol-surface);
-  }
-
-  h3 {
-    margin: 0;
-    font-size: var(--ol-fs-md);
-  }
-
-  .more {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 4px;
-    padding-top: 10px;
-    border-top: 1px solid var(--ol-border);
+  .status {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
   }
 
   .note {
