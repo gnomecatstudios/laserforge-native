@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
-import { newProject, prepare } from './helpers';
+import { dragOnCanvas, newProject, prepare } from './helpers';
 
 test.beforeEach(async ({ page }) => prepare(page));
 
@@ -49,4 +49,27 @@ test('a trackpad pinch zooms by the pinch scale around the fingers, not the page
   expect((await percent(page)) / start).toBeCloseTo(2, 1);
   expect(await cursor()).toBe(anchor);
   expect(await page.evaluate(() => window.visualViewport!.scale)).toBe(1);
+});
+
+test('editing nodes and moving objects keeps the zoom', async ({ page }) => {
+  await newProject(page);
+  await page.getByTestId('tool-rect').click();
+  await dragOnCanvas(page, [0.4, 0.4], [0.6, 0.6]);
+  const box = (await page.getByTestId('bed-canvas').boundingBox())!;
+  await page.mouse.dblclick(box.x + box.width * 0.5, box.y + box.height * 0.4);
+  await page.getByRole('button', { name: 'Zoom in' }).click();
+  await page.getByRole('button', { name: 'Zoom in' }).click();
+  const zoomed = await percent(page);
+
+  const n = (await page.getByTestId('path-node').first().boundingBox())!;
+  await page.mouse.move(n.x + n.width / 2, n.y + n.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(n.x + 20, n.y + 15, { steps: 5 });
+  await page.mouse.up();
+  expect(await percent(page), 'after dragging a node').toBe(zoomed);
+
+  await page.keyboard.press('v');
+  await page.keyboard.press('ControlOrMeta+a');
+  await page.keyboard.press('ArrowRight');
+  expect(await percent(page), 'after nudging').toBe(zoomed);
 });
