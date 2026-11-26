@@ -102,10 +102,10 @@
 
 <style>
   .machine {
-    padding: 16px;
+    padding: 12px 14px 14px;
     display: flex;
     flex-direction: column;
-    gap: 14px;
+    gap: 12px;
   }
 
   .head {
@@ -134,7 +134,7 @@
     display: flex;
     flex-direction: column;
     gap: 8px;
-    padding-top: 12px;
+    padding-top: 10px;
     border-top: 1px solid var(--ol-border);
   }
 

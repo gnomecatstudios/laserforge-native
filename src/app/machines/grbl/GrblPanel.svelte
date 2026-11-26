@@ -39,6 +39,9 @@
           }
         : null,
   );
+  const firmware = $derived(
+    `${machine.state.firmware?.name === 'grbl' ? 'Grbl' : (machine.state.firmware?.name ?? '')} ${machine.state.firmware?.version ?? ''} · ${profiles.active.baudRate} baud · RX ${machine.handshake?.rxSize ?? 128}`,
+  );
   const lineError = $derived(progress.phase === 'error-hold' && progress.error ? progress.error : null);
 </script>
 
@@ -68,10 +71,7 @@
       <span class="conn-name"
         >{machine.transportLabel ?? (machine.transportKind === 'simulator' ? 'Virtual machine' : 'USB')}</span
       >
-      <span class="mono muted small">
-        {machine.state.firmware?.name === 'grbl' ? 'Grbl' : machine.state.firmware?.name}
-        {machine.state.firmware?.version} · {profiles.active.baudRate} · RX {machine.handshake?.rxSize ?? 128}
-      </span>
+      <span class="mono muted small fw" title={firmware}>{firmware}</span>
     </div>
     <button type="button" class="btn small ghost" onclick={() => machine.disconnect()}>Disconnect</button>
   </div>
@@ -133,20 +133,23 @@
     </div>
     <Overrides />
   {:else}
-    <JogPad disabled={running} />
-    <div class="tools">
-      <button type="button" class="icon-btn sm" aria-label="Unlock ($X)" onclick={() => machine.unlock()}
-        ><LockOpen size={15} /></button
+    <JogPad disabled={running}>
+      <button
+        type="button"
+        class="btn small ghost"
+        title="Clear an alarm lock so the head can move ($X)"
+        onclick={() => machine.unlock()}><LockOpen size={14} />Unlock</button
       >
       {#if profiles.active.supportsAirAssist}
         <button
           type="button"
-          class="icon-btn sm"
+          class="btn small ghost"
+          title="Air assist on or off (M8/M9)"
           aria-label="Air assist on or off (M8/M9)"
-          onclick={() => machine.realtime('flood-toggle')}><Wind size={15} /></button
+          onclick={() => machine.realtime('flood-toggle')}><Wind size={14} />Air</button
         >
       {/if}
-    </div>
+    </JogPad>
   {/if}
 {/if}
 
@@ -157,13 +160,11 @@
     gap: 8px;
   }
 
-
-
   .conn {
     display: flex;
     align-items: center;
     gap: 10px;
-    padding: 10px 12px;
+    padding: 8px 10px;
     border-radius: var(--ol-radius-md);
     background: var(--ol-bg);
     border: 1px solid var(--ol-border);
@@ -253,8 +254,9 @@
     justify-content: space-between;
   }
 
-  .tools {
-    display: flex;
-    gap: 4px;
+  .fw {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 </style>

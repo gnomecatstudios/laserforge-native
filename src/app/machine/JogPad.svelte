@@ -4,11 +4,12 @@
   import ChevronLeft from '@lucide/svelte/icons/chevron-left';
   import ChevronRight from '@lucide/svelte/icons/chevron-right';
   import House from '@lucide/svelte/icons/house';
-  import type { Component } from 'svelte';
+  import type { Component, Snippet } from 'svelte';
   import { machine } from '../state/machine.svelte';
   import { coord } from '../lib/format';
 
-  let { disabled = false }: { disabled?: boolean } = $props();
+  /** `children` sits under the step picker: machine actions such as unlock and air assist. */
+  let { disabled = false, children }: { disabled?: boolean; children?: Snippet } = $props();
 
   const STEPS = [0.1, 1, 10, 50];
   /** Holding a jog button longer than this switches to continuous jogging. */
@@ -96,18 +97,21 @@
       <span><span class="muted">X</span> {coord(machine.position?.x ?? 0)}</span>
       <span><span class="muted">Y</span> {coord(machine.position?.y ?? 0)}</span>
     </div>
-    <div class="steps" role="group" aria-label="Jog step">
-      {#each STEPS as s (s)}
-        <button
-          type="button"
-          class="step mono"
-          aria-pressed={machine.jogStep === s}
-          onclick={() => (machine.jogStep = s)}
-          {disabled}>{s}</button
-        >
-      {/each}
+    <div class="step-block">
+      <span class="unit">Step (mm)</span>
+      <div class="steps" role="group" aria-label="Jog step">
+        {#each STEPS as s (s)}
+          <button
+            type="button"
+            class="step mono"
+            aria-pressed={machine.jogStep === s}
+            onclick={() => (machine.jogStep = s)}
+            {disabled}>{s}</button
+          >
+        {/each}
+      </div>
     </div>
-    <span class="unit">Step, mm</span>
+    {#if children}<div class="extra">{@render children()}</div>{/if}
   </div>
 </div>
 
@@ -166,10 +170,22 @@
 
   .pos {
     display: flex;
-    flex-direction: column;
+    gap: 14px;
     font-size: var(--ol-fs-lg);
     font-weight: 500;
-    line-height: 1.5;
+    line-height: 1.3;
+    white-space: nowrap;
+  }
+
+  .step-block {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .extra {
+    display: flex;
+    gap: 4px;
   }
 
   .steps {
