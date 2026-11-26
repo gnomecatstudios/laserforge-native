@@ -1,7 +1,7 @@
 <script lang="ts">
   import { groupLeaves } from 'libopenlaser/project';
   import { currentBed } from '../state/work-area';
-  import { onMount } from 'svelte';
+  import { onMount, untrack } from 'svelte';
   import Minus from '@lucide/svelte/icons/minus';
   import Plus from '@lucide/svelte/icons/plus';
   import Maximize from '@lucide/svelte/icons/maximize';
@@ -673,12 +673,15 @@
     };
   });
 
+  // Refit when the bed's size or origin actually changes. `bed` is a fresh object after every edit
+  // (it is derived from the project), so key on its values, and leave canvas size out of it.
+  const bedKey = $derived(`${bed.width}x${bed.height}:${bed.originCorner}`);
   $effect(() => {
-    // Refit when the machine's bed size changes.
-    void bed.width;
-    void bed.height;
-    canvas.fitted = false;
-    if (canvas.size.width > 0) canvas.fit(bed);
+    void bedKey;
+    untrack(() => {
+      canvas.fitted = false;
+      if (canvas.size.width > 0) canvas.fit(bed);
+    });
   });
 
   $effect(() => {
