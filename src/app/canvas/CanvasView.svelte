@@ -596,7 +596,10 @@
       event.deltaMode !== 0 ||
       (event.deltaX === 0 && Math.abs(event.deltaY) >= 50 && Number.isInteger(event.deltaY));
     if (event.ctrlKey || event.metaKey || mouseWheel) {
-      const factor = Math.exp(-event.deltaY * (event.deltaMode === 1 ? 0.05 : event.ctrlKey ? 0.01 : 0.002));
+      // A wheel notch zooms the same with or without Ctrl; the finer Ctrl rate is for trackpad
+      // pinch, which reports small pixel deltas with ctrlKey set.
+      const rate = event.deltaMode === 1 ? 0.05 : mouseWheel ? 0.002 : event.ctrlKey ? 0.01 : 0.002;
+      const factor = Math.exp(-event.deltaY * rate);
       canvas.view = zoomAt(canvas.view, factor, screen);
     } else {
       canvas.view = {
