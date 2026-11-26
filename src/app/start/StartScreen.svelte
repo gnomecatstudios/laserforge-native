@@ -9,6 +9,11 @@
   import Info from '@lucide/svelte/icons/info';
   import Trash2 from '@lucide/svelte/icons/trash-2';
   import FolderOpen from '@lucide/svelte/icons/folder-open';
+  import Glasses from '@lucide/svelte/icons/glasses';
+  import Wind from '@lucide/svelte/icons/wind';
+  import Eye from '@lucide/svelte/icons/eye';
+  import FireExtinguisher from '@lucide/svelte/icons/fire-extinguisher';
+  import type { Component } from 'svelte';
   import Logo from '$lib/ui/Logo.svelte';
   import GithubMark from '$lib/ui/GithubMark.svelte';
   import ErrorBoundary from '$lib/ui/ErrorBoundary.svelte';
@@ -32,6 +37,18 @@
   const serial = isWebSerialSupported();
   const theme = $derived(preferences.value.theme === 'dark' ? 'dark' : 'light');
   const profile = $derived(profiles.active);
+
+  /** The habits the pre-flight checklist asks for, shown before there is a job to start. */
+  const SAFETY: Array<{ icon: Component; title: string; text: string }> = [
+    { icon: Glasses, title: 'Safety glasses on', text: 'Rated for your laser’s wavelength.' },
+    { icon: Wind, title: 'Smoke extracted', text: 'Ventilate the room. Never cut PVC or vinyl.' },
+    { icon: Eye, title: 'Stay with the laser', text: 'Watch the whole job. Flare-ups happen in seconds.' },
+    {
+      icon: FireExtinguisher,
+      title: 'Extinguisher in reach',
+      text: 'CO₂ extinguisher or fire blanket nearby.',
+    },
+  ];
 
   function toggleTheme() {
     void preferences.update({ theme: theme === 'dark' ? 'light' : 'dark' });
@@ -137,6 +154,20 @@
           {/if}
         </div>
       </ErrorBoundary>
+      <div class="panel safety" data-testid="start-safety">
+        <div class="panel-head">
+          <h2>Safety habits</h2>
+        </div>
+        <ul class="habits">
+          {#each SAFETY as habit (habit.title)}
+            <li>
+              <habit.icon size={18} />
+              <span class="habit-text"><strong>{habit.title}</strong><span>{habit.text}</span></span>
+            </li>
+          {/each}
+        </ul>
+        <p class="empty small">Press <span class="kbd">Esc</span> to stop the laser at any time.</p>
+      </div>
     </aside>
   </main>
 
@@ -315,6 +346,41 @@
     list-style: none;
     margin: 0 -10px;
     padding: 0;
+  }
+
+  .habits {
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .habits li {
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+  }
+
+  .habits li > :global(svg) {
+    flex-shrink: 0;
+    margin-top: 2px;
+    color: var(--ol-beam);
+  }
+
+  .habit-text {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+  }
+
+  .habit-text span {
+    color: var(--ol-text-muted);
+    font-size: var(--ol-fs-sm);
+  }
+
+  .safety .small {
+    margin: 0;
+    font-size: var(--ol-fs-sm);
   }
 
   .recent {

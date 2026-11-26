@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { expect, test, type Page } from '@playwright/test';
-import { dragOnCanvas, newProject, openMachine, prepare, closeMachineMenu } from './helpers';
+import { closeMachine, dragOnCanvas, newProject, openMachine, prepare, closeMachineMenu } from './helpers';
 
 test.beforeEach(async ({ page }) => prepare(page));
 
@@ -18,10 +18,13 @@ test('an LP4 picks lasers per layer and switches to its rotary from the machine 
   await expect(setup).toContainText('Flat bed');
   await expect(setup).toContainText('Slide');
 
+  // The Machine dropdown covers the middle of the bed; draw with it closed.
+  await closeMachine(page);
   await page.getByTestId('tool-rect').click();
   await dragOnCanvas(page, [0.45, 0.45], [0.55, 0.55]);
   await page.getByTestId('layer-laser').getByRole('button', { name: '1064 nm infrared' }).click();
 
+  await openMachine(page);
   await page.getByTestId('accessory-rotary').click();
   const diameter = page.getByTestId('object-diameter');
   await diameter.fill('50');
@@ -52,6 +55,7 @@ test('an LP2 runs a rotary job on the virtual LaserPecker', async ({ page }) => 
   await pickMachine(page, 'laserpecker lp2', /LP2/);
   await page.getByTestId('tool-rect').click();
   await dragOnCanvas(page, [0.45, 0.45], [0.55, 0.55]);
+  await openMachine(page);
   await page.getByTestId('accessory-rotary').click();
   await page.getByTestId('lp-connect-virtual').click();
   await expect(page.getByTestId('lp-state')).toHaveText('Idle');

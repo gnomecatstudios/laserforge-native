@@ -59,11 +59,13 @@
 </div>
 
 <style>
+  /* Bottom centre, clear of the top-bar dropdowns (their × sits where a top toast would) and
+     of the side panel's job controls. */
   .toaster {
     position: fixed;
     z-index: 60;
     left: 50%;
-    top: 68px;
+    bottom: 100px;
     transform: translateX(-50%);
     display: flex;
     flex-direction: column;
