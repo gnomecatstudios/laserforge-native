@@ -33,6 +33,12 @@ describe('keyboard shortcuts', () => {
     expect(matches(ev('?', { shift: true }), '?', true)).toBe(true);
   });
 
+  it('zooms in on Ctrl++ and the numpad plus as well as Ctrl+=', () => {
+    expect(matches(ev('=', { ctrl: true }), 'Mod+=', false)).toBe(true);
+    expect(matches(ev('+', { ctrl: true, shift: true }), 'Mod+=', false)).toBe(true);
+    expect(matches(ev('+', { ctrl: true }), 'Mod+=', false)).toBe(true);
+  });
+
   it('matches named keys', () => {
     expect(matches(ev('ArrowLeft', { shift: true }), 'Shift+ArrowLeft', false)).toBe(true);
     expect(matches(ev('Escape'), 'Escape', false)).toBe(true);

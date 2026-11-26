@@ -38,6 +38,9 @@ export interface KeyLike {
   altKey: boolean;
 }
 
+/** Keys that type a different character but mean the same shortcut. */
+const KEY_ALIASES: Record<string, string> = { '+': '=' };
+
 export function matches(event: KeyLike, spec: string, apple = isApple()): boolean {
   const combo = parseCombo(spec);
   const mod = apple ? event.metaKey : event.ctrlKey;
@@ -47,7 +50,9 @@ export function matches(event: KeyLike, spec: string, apple = isApple()): boolea
   if (/^\d$/.test(combo.key) && event.code) {
     return event.shiftKey === combo.shift && event.code === `Digit${combo.key}`;
   }
-  const key = event.key.length === 1 ? event.key.toLowerCase() : event.key;
+  const typed = event.key.length === 1 ? event.key.toLowerCase() : event.key;
+  // "+" is Shift+= on most layouts and the numpad's own key, so Mod+= also answers to Ctrl++.
+  const key = KEY_ALIASES[typed] ?? typed;
   // Shift changes printable keys ("?" is Shift+/), so only enforce it for letters and named keys.
   const shiftMatters = combo.key.length > 1 || /[a-z]/.test(combo.key);
   if (shiftMatters && event.shiftKey !== combo.shift) return false;
