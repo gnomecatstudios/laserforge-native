@@ -63,7 +63,9 @@
     position: fixed;
     z-index: 60;
     left: 50%;
-    top: 68px;
+    /* Bottom centre, clear of the status bar and the canvas zoom control. At the top the stack
+       sat over the menus that drop from the top bar (Machine panel close button included). */
+    bottom: calc(var(--ol-statusbar-h, 28px) + 64px);
     transform: translateX(-50%);
     display: flex;
     flex-direction: column;
