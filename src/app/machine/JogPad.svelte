@@ -170,7 +170,7 @@
 
   .pos {
     display: flex;
-    gap: 14px;
+    flex-direction: column;
     font-size: var(--ol-fs-lg);
     font-weight: 500;
     line-height: 1.3;

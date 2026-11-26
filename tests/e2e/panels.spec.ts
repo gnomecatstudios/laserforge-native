@@ -27,7 +27,7 @@ test('the side panel runs layers, then the selection, and sections fold', async 
   await expect(page.getByTestId('layer-settings')).toBeVisible();
 });
 
-test('the machine lives in a top-bar dropdown that stays open while you work', async ({ page }) => {
+test('the machine panel docks beside the bed and stays open while you work', async ({ page }) => {
   await page.goto('/');
   await page.getByTestId('new-project').click();
   await expect(page.getByTestId('workspace')).toBeVisible();
@@ -36,9 +36,18 @@ test('the machine lives in a top-bar dropdown that stays open while you work', a
 
   await page.getByTestId('machine-menu').click();
   await expect(page.getByTestId('change-machine')).toBeVisible();
-  // Working on the bed leaves it open; × closes it.
-  await page.getByTestId('bed-canvas').click();
+  // The middle of the bed stays reachable: drawing there works with the panel open.
+  await page.getByTestId('tool-rect').click();
+  await dragOnCanvas(page, [0.45, 0.45], [0.55, 0.55]);
+  await expect(page.getByTestId('object-row')).toHaveCount(1);
   await expect(page.getByTestId('machine-panel')).toBeVisible();
+  // Shortcuts still reach the design: Escape clears the selection first, then closes the panel.
+  await page.keyboard.press('Escape');
+  await expect(page.getByTestId('machine-panel')).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(page.getByTestId('machine-panel')).toHaveCount(0);
+  // The top-bar button and × open and close it.
+  await page.getByTestId('machine-menu').click();
   await page.getByTestId('machine-close').click();
   await expect(page.getByTestId('machine-panel')).toHaveCount(0);
 });

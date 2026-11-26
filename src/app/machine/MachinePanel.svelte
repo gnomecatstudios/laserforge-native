@@ -79,23 +79,25 @@
           />
         {/if}
       </div>
-      <div class="origin-actions">
-        <button
-          type="button"
-          class="btn small"
-          disabled={!machine.connected || running}
-          title="Use the laser's current position as the job origin"
-          onclick={() => machine.setUserOriginHere()}
-          data-testid="set-origin"><Flag size={14} />Set origin here</button
-        >
-        <button
-          type="button"
-          class="btn small"
-          disabled={!machine.connected || running}
-          title="Move the laser to the job origin with the laser off"
-          onclick={() => machine.goToOrigin()}><LocateFixed size={14} />Go to origin</button
-        >
-      </div>
+      {#if machine.connected}
+        <div class="origin-actions">
+          <button
+            type="button"
+            class="btn small"
+            disabled={running}
+            title="Use the laser's current position as the job origin"
+            onclick={() => machine.setUserOriginHere()}
+            data-testid="set-origin"><Flag size={14} />Set origin here</button
+          >
+          <button
+            type="button"
+            class="btn small"
+            disabled={running}
+            title="Move the laser to the job origin with the laser off"
+            onclick={() => machine.goToOrigin()}><LocateFixed size={14} />Go to origin</button
+          >
+        </div>
+      {/if}
     </div>
   {/if}
 </section>

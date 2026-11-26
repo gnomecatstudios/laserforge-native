@@ -628,8 +628,17 @@
       el.height = Math.max(1, Math.round(r.height * dpr));
       el.style.width = `${r.width}px`;
       el.style.height = `${r.height}px`;
+      const before = canvas.size;
       canvas.size = { width: r.width, height: r.height };
       if (!canvas.fitted && r.width > 0) canvas.fit(bed);
+      else if (r.width > 0 && before.width > 0) {
+        // Keep what was in the middle in the middle, e.g. when the Machine panel docks beside it.
+        canvas.view = {
+          ...canvas.view,
+          offsetX: canvas.view.offsetX + (r.width - before.width) / 2,
+          offsetY: canvas.view.offsetY + (r.height - before.height) / 2,
+        };
+      }
       invalidate();
     };
     const observer = new ResizeObserver(resize);

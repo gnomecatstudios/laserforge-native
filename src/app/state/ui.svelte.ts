@@ -12,7 +12,7 @@ export type PendingVectorImport =
 class Ui {
   tourOpen = $state(false);
   profilesOpen = $state(false);
-  /** The Machine dropdown in the top bar. Stays open while you work on the bed. */
+  /** The Machine panel, docked left of the bed. Stays open while you work on the bed. */
   machineOpen = $state(false);
   preferencesOpen = $state(false);
   deviceSettingsOpen = $state(false);

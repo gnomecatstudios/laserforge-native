@@ -18,6 +18,8 @@
   import SelectionInspector from '../inspector/SelectionInspector.svelte';
   import { textOutlines } from '../state/text.svelte';
   import ConsolePanel from '../machine/ConsolePanel.svelte';
+  import MachinePanel from '../machine/MachinePanel.svelte';
+  import { ui } from '../state/ui.svelte';
   import { connectedAdapter, shownAdapter } from '../machines/registry';
   import StatusBar from './StatusBar.svelte';
   import { untrack } from 'svelte';
@@ -79,6 +81,11 @@
 <div class="workspace" data-testid="workspace">
   <ErrorBoundary name="Top bar" compact><TopBar /></ErrorBoundary>
   <div class="body">
+    {#if ui.machineOpen}
+      <aside class="machine-dock" id="machine-dock">
+        <ErrorBoundary name="Machine"><MachinePanel /></ErrorBoundary>
+      </aside>
+    {/if}
     <main class="center">
       <ErrorBoundary name="Tools" compact><ToolRail /></ErrorBoundary>
       {#if editor.project && editor.view === 'design'}
@@ -147,6 +154,14 @@
     flex-grow: 1;
     display: flex;
     min-height: 0;
+  }
+
+  .machine-dock {
+    width: 300px;
+    flex-shrink: 0;
+    overflow-y: auto;
+    border-right: 1px solid var(--ol-border);
+    background: var(--ol-surface);
   }
 
   .center {

@@ -357,6 +357,13 @@ export const SHORTCUTS: Shortcut[] = [
     run: () => (editor.tool = 'measure'),
   },
 
+  {
+    keys: ['Escape'],
+    label: 'Close the Machine panel',
+    group: 'Machine',
+    when: () => ui.machineOpen,
+    run: () => (ui.machineOpen = false),
+  },
   { keys: ['?'], label: 'Keyboard shortcuts', group: 'Help', run: () => (ui.shortcutsOpen = true) },
   { keys: ['F1'], label: 'Help', group: 'Help', run: () => route.go('help') },
   {

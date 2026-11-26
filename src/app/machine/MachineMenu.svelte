@@ -1,49 +1,38 @@
 <script lang="ts">
-  import { Popover } from 'bits-ui';
   import ChevronDown from '@lucide/svelte/icons/chevron-down';
   import Cpu from '@lucide/svelte/icons/cpu';
-  import ErrorBoundary from '$lib/ui/ErrorBoundary.svelte';
   import { shownAdapter } from '../machines/registry';
   import { profiles } from '../state/profiles.svelte';
   import { ui } from '../state/ui.svelte';
   import { currentBed } from '../state/work-area';
-  import MachinePanel from './MachinePanel.svelte';
 
   /**
-   * The machine, its work area and its controls, in a dropdown off the top bar. It stays open
-   * while you work on the bed (jogging, framing), and closes from its button, × or Escape.
+   * Opens the Machine panel, docked at the left of the workspace so the bed stays in view and
+   * shortcuts keep working while you jog and frame. It closes from this button, its × or Escape.
    */
   const adapter = $derived(shownAdapter());
   const area = $derived(currentBed());
 </script>
 
-<Popover.Root bind:open={ui.machineOpen}>
-  <Popover.Trigger
-    class="machine-trigger"
-    aria-label="Machine: {profiles.active.name}"
-    title="{profiles.active.name} · {Math.round(area.width)} × {Math.round(area.height)} mm"
-    data-testid="machine-menu"
-  >
-    <Cpu size={16} />
-    <span class="label">
-      <span class="name">{profiles.active.name}</span>
-      <span class="mono dims">{Math.round(area.width)} × {Math.round(area.height)} mm</span>
-    </span>
-    {#if adapter.badge}<adapter.badge />{/if}
-    <ChevronDown size={15} class="chev" />
-  </Popover.Trigger>
-  <Popover.Portal>
-    <Popover.Content
-      class="machine-dropdown"
-      sideOffset={6}
-      align="start"
-      interactOutsideBehavior="ignore"
-      trapFocus={false}
-    >
-      <ErrorBoundary name="Machine"><MachinePanel /></ErrorBoundary>
-    </Popover.Content>
-  </Popover.Portal>
-</Popover.Root>
+<button
+  type="button"
+  class="machine-trigger"
+  aria-label="Machine: {profiles.active.name}"
+  aria-expanded={ui.machineOpen}
+  aria-controls="machine-dock"
+  data-state={ui.machineOpen ? 'open' : 'closed'}
+  title="{profiles.active.name} · {Math.round(area.width)} × {Math.round(area.height)} mm"
+  onclick={() => (ui.machineOpen = !ui.machineOpen)}
+  data-testid="machine-menu"
+>
+  <Cpu size={16} />
+  <span class="label">
+    <span class="name">{profiles.active.name}</span>
+    <span class="mono dims">{Math.round(area.width)} × {Math.round(area.height)} mm</span>
+  </span>
+  {#if adapter.badge}<adapter.badge />{/if}
+  <ChevronDown size={15} class="chev" />
+</button>
 
 <style>
   :global(.machine-trigger) {
@@ -95,17 +84,5 @@
     font-size: var(--ol-fs-xs);
     color: var(--ol-text-muted);
     white-space: nowrap;
-  }
-
-  :global(.machine-dropdown) {
-    z-index: 50;
-    width: 360px;
-    max-height: calc(100vh - var(--ol-topbar-h) - 24px);
-    overflow-y: auto;
-    border-radius: var(--ol-radius-md);
-    background: var(--ol-surface);
-    border: 1px solid var(--ol-border-strong);
-    box-shadow: var(--ol-shadow-pop);
-    outline: none;
   }
 </style>
