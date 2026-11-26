@@ -30,3 +30,23 @@ test('a mouse wheel notch zooms the same with or without Ctrl', async ({ page })
   expect(plain).toBeGreaterThan(start);
   expect(Math.abs((await percent(page)) - plain)).toBeLessThanOrEqual(1);
 });
+
+test('a trackpad pinch zooms by the pinch scale around the fingers, not the page', async ({ page }) => {
+  await newProject(page);
+  const box = (await page.getByTestId('bed-canvas').boundingBox())!;
+  const x = Math.round(box.x + box.width * 0.3);
+  const y = Math.round(box.y + box.height * 0.4);
+  const cursor = async () => {
+    await page.mouse.move(x + 1, y);
+    await page.mouse.move(x, y);
+    return page.getByText(/^Cursor /).textContent();
+  };
+  const anchor = await cursor();
+  const start = await percent(page);
+  // Chrome turns a real trackpad pinch into a stream of small Ctrl+wheel events.
+  const cdp = await page.context().newCDPSession(page);
+  await cdp.send('Input.synthesizePinchGesture', { x, y, scaleFactor: 2, gestureSourceType: 'mouse' });
+  expect((await percent(page)) / start).toBeCloseTo(2, 1);
+  expect(await cursor()).toBe(anchor);
+  expect(await page.evaluate(() => window.visualViewport!.scale)).toBe(1);
+});
